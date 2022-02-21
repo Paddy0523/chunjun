@@ -210,7 +210,9 @@ public class JdbcUtil {
                     rollBack(conn);
                 }
 
-                conn.close();
+                if (!conn.isClosed()) {
+                    conn.close();
+                }
             } catch (SQLException e) {
                 LOG.warn("Close connection error:{}", ExceptionUtil.getErrorMessage(e));
             }

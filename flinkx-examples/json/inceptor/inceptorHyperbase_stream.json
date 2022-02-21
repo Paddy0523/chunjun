@@ -1,0 +1,111 @@
+{
+  "job": {
+    "content": [
+      {
+        "reader": {
+          "parameter": {
+            "password": "",
+            "startLocation": "",
+            "increColumn": "",
+            "column": [
+              {
+                "name": "ID",
+                "type": "STRING",
+                "key": "ID"
+              },
+              {
+                "name": "int_data",
+                "type": "INT",
+                "key": "int_data"
+              },
+              {
+                "name": "boolean_data",
+                "type": "BOOLEAN",
+                "key": "boolean_data"
+              },
+              {
+                "name": "tinyint_data",
+                "type": "TINYINT",
+                "key": "tinyint_data"
+              },
+              {
+                "name": "smallint_data",
+                "type": "SMALLINT",
+                "key": "smallint_data"
+              },
+              {
+                "name": "bigint_data",
+                "type": "BIGINT",
+                "key": "bigint_data"
+              },
+              {
+                "name": "float_data",
+                "type": "FLOAT",
+                "key": "float_data"
+              },
+              {
+                "name": "double_data",
+                "type": "DOUBLE",
+                "key": "double_data"
+              },
+              {
+                "name": "decimal_data",
+                "type": "DECIMAL",
+                "key": "decimal_data"
+              },
+              {
+                "name": "varchar_data",
+                "type": "varchar",
+                "key": "varchar_data"
+              },
+              {
+                "name": "date_data",
+                "type": "DATE",
+                "key": "date_data"
+              },
+              {
+                "name": "timestamp_data",
+                "type": "TIMESTAMP",
+                "key": "timestamp_data"
+              }
+            ],
+            "connection": [
+              {
+                "jdbcUrl": [
+                  "jdbc:hive2://inceptor3:10000"
+                ],
+                "table": [
+                  "liuliu.hbase_type_liuliu"
+                ]
+              }
+            ],
+            "polling": false,
+            "username": ""
+          },
+          "name": "inceptorreader"
+        },
+        "writer": {
+          "parameter": {
+            "print": true
+          },
+          "name": "streamwriter"
+        }
+      }
+    ],
+    "setting": {
+      "restore": {
+        "isRestore": false,
+        "isStream": false
+      },
+      "errorLimit": {
+        "record": 0
+      },
+      "speed": {
+        "readerChannel": 1,
+        "writerChannel": 1,
+        "bytes": -1048576,
+        "channel": 1
+      }
+    }
+  }
+}
