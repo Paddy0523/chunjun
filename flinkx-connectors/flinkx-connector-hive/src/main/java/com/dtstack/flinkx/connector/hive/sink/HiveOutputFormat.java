@@ -270,6 +270,7 @@ public class HiveOutputFormat extends BaseRichOutputFormat {
         if (outputFormat == null) {
             HiveUtil.createPartition(
                     tableInfo,
+                    hiveConf.getSchema(),
                     partitionPath,
                     connectionInfo,
                     getRuntimeContext().getDistributedCache());
@@ -381,7 +382,10 @@ public class HiveOutputFormat extends BaseRichOutputFormat {
             }
             tableInfo.setTablePath(tablePath);
             HiveUtil.createHiveTableWithTableInfo(
-                    tableInfo, connectionInfo, getRuntimeContext().getDistributedCache());
+                    tableInfo,
+                    hiveConf.getSchema(),
+                    connectionInfo,
+                    getRuntimeContext().getDistributedCache());
             tableCacheMap.put(tablePath, tableInfo);
         }
         return tableInfo;
