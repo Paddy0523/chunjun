@@ -25,6 +25,9 @@ import com.dtstack.flinkx.connector.jdbc.util.JdbcUtil;
 import com.dtstack.flinkx.enums.EWriteMode;
 import com.dtstack.flinkx.enums.Semantic;
 import com.dtstack.flinkx.throwable.FlinkxRuntimeException;
+import com.dtstack.flinkx.util.PluginUtil;
+
+import org.apache.flink.api.common.cache.DistributedCache;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -57,7 +60,12 @@ public class InceptorSearchOutputFormat extends JdbcOutputFormat {
 
     @Override
     public Connection getConnection() {
-        return InceptorDbUtil.getConnection(
-                (InceptorConf) jdbcConf, getRuntimeContext().getDistributedCache(), jobId);
+        DistributedCache distributedCache;
+        try {
+            distributedCache = getRuntimeContext().getDistributedCache();
+        } catch (Exception e) {
+            distributedCache = PluginUtil.createDistributedCacheFromContextClassLoader();
+        }
+        return InceptorDbUtil.getConnection((InceptorConf) jdbcConf, distributedCache, jobId);
     }
 }
