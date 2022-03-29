@@ -50,6 +50,19 @@ public class InceptorSearchColumnConverter extends JdbcColumnConverter {
     }
 
     @Override
+    protected ISerializationConverter<FieldNamedPreparedStatement>
+            wrapIntoNullableExternalConverter(
+                    ISerializationConverter serializationConverter, LogicalType type) {
+        return (val, index, statement) -> {
+            if (((ColumnRowData) val).getField(index) == null) {
+                statement.setNull(index, 0);
+            } else {
+                serializationConverter.serialize(val, index, statement);
+            }
+        };
+    }
+
+    @Override
     protected IDeserializationConverter createInternalConverter(LogicalType type) {
         switch (type.getTypeRoot()) {
             case VARCHAR:
