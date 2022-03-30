@@ -71,12 +71,9 @@ public final class InceptorDbUtil {
     public static final String INCEPTOR_TRANSACTION_COMMIT = "COMMIT";
     public static final String INCEPTOR_TRANSACTION_ROLLBACK = "ROLLBACK";
 
-    public static final String INCEPTOR_HYPERBASE_STORAGE_HANDLER =
-            "io.transwarp.hyperdrive.HyperdriveStorageHandler";
-    public static final String INCEPTOR_HBASE_STORAGE_HANDLER =
-            "org.apache.hadoop.hive.hbase.HBaseStorageHandler";
-    public static final String INCEPTOR_SEARCH_STORAGE_HANDLER =
-            "io.transwarp.esdrive.ElasticSearchStorageHandler";
+    public static final String INCEPTOR_HYPERBASE_STORAGE_HANDLER = "HyperdriveStorageHandler";
+    public static final String INCEPTOR_HBASE_STORAGE_HANDLER = "HBaseStorageHandler";
+    public static final String INCEPTOR_SEARCH_STORAGE_HANDLER = "ElasticSearchStorageHandler";
 
     public static final String INCEPROE_SHOW_DESCRIBE_FORMAT = "describe formatted %s";
 
@@ -190,6 +187,7 @@ public final class InceptorDbUtil {
 
     public static InceptorDialect getDialectWithDriverType(JdbcConf jdbcConf) {
         String storageHandler = getTableStorageHandler(jdbcConf);
+        storageHandler = storageHandler.substring(storageHandler.lastIndexOf(".") + 1);
         switch (storageHandler) {
             case INCEPTOR_HYPERBASE_STORAGE_HANDLER:
             case INCEPTOR_HBASE_STORAGE_HANDLER:
