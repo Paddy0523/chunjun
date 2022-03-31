@@ -68,7 +68,7 @@ public abstract class JdbcSinkFactory extends SinkFactory {
                                 new FieldNameExclusionStrategy("column"))
                         .create();
         GsonUtil.setTypeAdapter(gson);
-        jdbcConf = gson.fromJson(gson.toJson(syncConf.getWriter().getParameter()), JdbcConf.class);
+        jdbcConf = gson.fromJson(gson.toJson(syncConf.getWriter().getParameter()), getConfClass());
         int batchSize =
                 syncConf.getWriter()
                         .getIntVal(
@@ -112,6 +112,10 @@ public abstract class JdbcSinkFactory extends SinkFactory {
     @Override
     public RawTypeConverter getRawTypeConverter() {
         return jdbcDialect.getRawTypeConverter();
+    }
+
+    protected Class<? extends JdbcConf> getConfClass() {
+        return JdbcConf.class;
     }
 
     /**

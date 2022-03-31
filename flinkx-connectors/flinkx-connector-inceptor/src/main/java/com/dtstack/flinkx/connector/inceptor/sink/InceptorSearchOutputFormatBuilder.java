@@ -15,30 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.dtstack.flinkx.connector.db2.source;
 
-import com.dtstack.flinkx.connector.jdbc.source.JdbcInputFormat;
-import com.dtstack.flinkx.connector.jdbc.util.JdbcUtil;
+package com.dtstack.flinkx.connector.inceptor.sink;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
+import com.dtstack.flinkx.connector.jdbc.conf.JdbcConf;
+import com.dtstack.flinkx.connector.jdbc.sink.JdbcOutputFormatBuilder;
 
-import java.util.List;
+import org.apache.commons.lang.StringUtils;
 
-/**
- * Company: www.dtstack.com
- *
- * @author xuchao
- * @date 2021-06-15
- */
-public class Db2InputFormat extends JdbcInputFormat {
+/** @author liuliu 2022/2/24 */
+public class InceptorSearchOutputFormatBuilder extends JdbcOutputFormatBuilder {
+    public InceptorSearchOutputFormatBuilder() {
+        super(new InceptorSearchOutputFormat());
+    }
 
     @Override
-    protected Pair<List<String>, List<String>> getTableMetaData() {
-        return JdbcUtil.getTableMetaData(
-                null,
-                StringUtils.upperCase(jdbcConf.getSchema()),
-                StringUtils.upperCase(jdbcConf.getTable()),
-                dbConn);
+    protected void checkFormat() {
+        JdbcConf jdbcConf = format.getJdbcConf();
+        StringBuilder sb = new StringBuilder(256);
+        if (StringUtils.isBlank(jdbcConf.getJdbcUrl())) {
+            sb.append("No jdbc url supplied;\n");
+        }
+        if (sb.length() > 0) {
+            throw new IllegalArgumentException(sb.toString());
+        }
     }
 }

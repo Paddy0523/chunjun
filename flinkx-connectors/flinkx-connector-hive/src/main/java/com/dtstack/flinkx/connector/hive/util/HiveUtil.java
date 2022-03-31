@@ -74,10 +74,16 @@ public class HiveUtil {
                     "TableAlreadyExistsException");
 
     public static void createHiveTableWithTableInfo(
-            TableInfo tableInfo, ConnectionInfo connectionInfo, DistributedCache distributedCache) {
+            TableInfo tableInfo,
+            String schema,
+            ConnectionInfo connectionInfo,
+            DistributedCache distributedCache) {
         Connection connection = null;
         try {
             connection = HiveDbUtil.getConnection(connectionInfo, distributedCache);
+            if (StringUtils.isNotBlank(schema)) {
+                HiveDbUtil.executeSqlWithoutResultSet(connectionInfo, connection, "use " + schema);
+            }
             createTable(connection, tableInfo, connectionInfo);
             fillTableInfo(connection, tableInfo);
         } catch (Exception e) {
@@ -91,12 +97,16 @@ public class HiveUtil {
     /** 创建hive的分区 */
     public static void createPartition(
             TableInfo tableInfo,
+            String schema,
             String partition,
             ConnectionInfo connectionInfo,
             DistributedCache distributedCache) {
         Connection connection = null;
         try {
             connection = HiveDbUtil.getConnection(connectionInfo, distributedCache);
+            if (StringUtils.isNotBlank(schema)) {
+                HiveDbUtil.executeSqlWithoutResultSet(connectionInfo, connection, "use " + schema);
+            }
             String sql =
                     String.format(CREATE_PARTITION_TEMPLATE, tableInfo.getTablePath(), partition);
             HiveDbUtil.executeSqlWithoutResultSet(connectionInfo, connection, sql);
