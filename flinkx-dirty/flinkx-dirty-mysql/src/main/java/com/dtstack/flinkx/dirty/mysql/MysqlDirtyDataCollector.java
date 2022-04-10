@@ -18,6 +18,8 @@
 
 package com.dtstack.flinkx.dirty.mysql;
 
+import org.apache.flink.api.common.cache.DistributedCache;
+
 import com.dtstack.flinkx.dirty.DirtyConf;
 import com.dtstack.flinkx.dirty.consumer.DirtyDataCollector;
 import com.dtstack.flinkx.dirty.impl.DirtyDataEntry;
@@ -180,7 +182,7 @@ public class MysqlDirtyDataCollector extends DirtyDataCollector {
     }
 
     @Override
-    public void open() {
+    public void open(DistributedCache distributedCache) {
         initScheduledTask(batchIntervalMill);
 
         try {

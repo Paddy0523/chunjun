@@ -27,6 +27,7 @@ import com.dtstack.flinkx.util.DataSyncFactoryUtil;
 import com.dtstack.flinkx.util.ExceptionUtil;
 
 import org.apache.flink.api.common.accumulators.LongCounter;
+import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.functions.RuntimeContext;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -80,8 +81,11 @@ public class DirtyManager implements Serializable {
 
     private final LongCounter errorCounter;
 
+    private final DistributedCache distributedCache;
+
     public DirtyManager(DirtyConf dirtyConf, RuntimeContext runtimeContext) {
         this.consumer = DataSyncFactoryUtil.discoverDirty(dirtyConf);
+        this.distributedCache = runtimeContext.getDistributedCache();
         Map<String, String> allVariables = runtimeContext.getMetricGroup().getAllVariables();
         this.jobId = allVariables.get(JOB_ID);
         this.jobName = allVariables.getOrDefault(JOB_NAME, "defaultJobName");
@@ -110,7 +114,7 @@ public class DirtyManager implements Serializable {
                             new ThreadPoolExecutor.CallerRunsPolicy());
         }
 
-        consumer.open();
+        consumer.open(distributedCache);
         executor.execute(consumer);
     }
 

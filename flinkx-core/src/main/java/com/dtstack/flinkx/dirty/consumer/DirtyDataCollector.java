@@ -23,6 +23,7 @@ import com.dtstack.flinkx.dirty.impl.DirtyDataEntry;
 import com.dtstack.flinkx.throwable.NoRestartException;
 
 import org.apache.flink.api.common.accumulators.LongCounter;
+import org.apache.flink.api.common.cache.DistributedCache;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,7 +134,7 @@ public abstract class DirtyDataCollector implements Runnable, Serializable {
         return failedConsumedCounter;
     }
 
-    public void open() {}
+    public void open(DistributedCache distributedCache) {}
 
     /**
      * Initialize the consumer with {@link DirtyConf}

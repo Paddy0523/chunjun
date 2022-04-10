@@ -70,6 +70,10 @@ public class JobConf implements Serializable {
         this.setting = setting;
     }
 
+    public OldDirtyConf getDirty() {
+        return setting.getDirty();
+    }
+
     @Override
     public String toString() {
         return "JobConf{" + "content=" + content + ", setting=" + setting + '}';

@@ -245,6 +245,10 @@ public class SyncConf implements Serializable {
         return job.getNameMapping();
     }
 
+    public OldDirtyConf getOldDirtyConf() {
+        return job.getDirty();
+    }
+
     @Override
     public String toString() {
         return "SyncConf{"

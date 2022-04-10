@@ -314,6 +314,12 @@
 			<version>${project.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>com.dtstack.flinkx</groupId>
+			<artifactId>flinkx-dirty-hive</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
 		<!--Cdc-Restore-plugins-->
 		<dependency>
 			<groupId>com.dtstack.flinkx</groupId>

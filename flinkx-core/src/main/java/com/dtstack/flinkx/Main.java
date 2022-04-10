@@ -21,6 +21,7 @@ import com.dtstack.flinkx.cdc.CdcConf;
 import com.dtstack.flinkx.cdc.RestorationFlatMap;
 import com.dtstack.flinkx.cdc.monitor.fetch.FetcherBase;
 import com.dtstack.flinkx.cdc.monitor.store.StoreBase;
+import com.dtstack.flinkx.conf.OldDirtyConf;
 import com.dtstack.flinkx.conf.SpeedConf;
 import com.dtstack.flinkx.conf.SyncConf;
 import com.dtstack.flinkx.constants.ConstantValue;
@@ -40,6 +41,7 @@ import com.dtstack.flinkx.throwable.FlinkxRuntimeException;
 import com.dtstack.flinkx.util.DataSyncFactoryUtil;
 import com.dtstack.flinkx.util.ExecuteProcessHelper;
 import com.dtstack.flinkx.util.FactoryHelper;
+import com.dtstack.flinkx.util.GsonUtil;
 import com.dtstack.flinkx.util.PluginUtil;
 import com.dtstack.flinkx.util.PrintUtil;
 import com.dtstack.flinkx.util.PropertiesUtil;
@@ -47,6 +49,7 @@ import com.dtstack.flinkx.util.TableUtil;
 
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.runtime.jobgraph.SavepointConfigOptions;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -170,6 +173,18 @@ public class Main {
             throws Exception {
         SyncConf config = parseFlinkxConf(job, options);
         configStreamExecutionEnvironment(env, options, config);
+
+        // 兼容 1.10 历史脏数据逻辑。当old dirty conf 有效时，指定类型为hive，且参数为old dirty conf 中的参数
+        OldDirtyConf oldDirtyConf = config.getOldDirtyConf();
+        if (null != oldDirtyConf && oldDirtyConf.isValid()) {
+            Configuration configuration = new Configuration();
+            configuration.setString("flinkx.dirty-data.output-type", "hive");
+            configuration.setString("flinkx.dirty-data.hive.path", oldDirtyConf.getPath());
+            configuration.setString(
+                    "flinkx.dirty-data.hive.hadoopConfig",
+                    GsonUtil.GSON.toJson(oldDirtyConf.getHadoopConfig()));
+            env.getConfig().setGlobalJobParameters(configuration);
+        }
 
         SourceFactory sourceFactory = DataSyncFactoryUtil.discoverSource(config, env);
         DataStream<RowData> dataStreamSource = sourceFactory.createSource();
