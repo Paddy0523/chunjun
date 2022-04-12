@@ -21,6 +21,7 @@ import com.dtstack.flinkx.cdc.CdcConf;
 import com.dtstack.flinkx.cdc.RestorationFlatMap;
 import com.dtstack.flinkx.cdc.monitor.fetch.FetcherBase;
 import com.dtstack.flinkx.cdc.monitor.store.StoreBase;
+import com.dtstack.flinkx.conf.ErrorLimitConf;
 import com.dtstack.flinkx.conf.OldDirtyConf;
 import com.dtstack.flinkx.conf.SpeedConf;
 import com.dtstack.flinkx.conf.SyncConf;
@@ -177,7 +178,9 @@ public class Main {
         // 兼容 1.10 历史脏数据逻辑。当old dirty conf 有效时，指定类型为hive，且参数为old dirty conf 中的参数
         OldDirtyConf oldDirtyConf = config.getOldDirtyConf();
         if (null != oldDirtyConf && oldDirtyConf.isValid()) {
+            ErrorLimitConf errorLimit = config.getErrorLimit();
             Configuration configuration = new Configuration();
+            configuration.setString("flinkx.dirty-data.max-rows", String.valueOf(errorLimit.getRecord()));
             configuration.setString("flinkx.dirty-data.output-type", "hive");
             configuration.setString("flinkx.dirty-data.hive.path", oldDirtyConf.getPath());
             configuration.setString(
