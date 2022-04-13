@@ -24,6 +24,7 @@ import com.dtstack.flinkx.dirty.manager.DirtyManager;
 import com.dtstack.flinkx.dirty.utils.DirtyConfUtil;
 import com.dtstack.flinkx.metrics.AccumulatorCollector;
 import com.dtstack.flinkx.metrics.BaseMetric;
+import com.dtstack.flinkx.metrics.RowSizeCalculator;
 import com.dtstack.flinkx.restore.FormatState;
 import com.dtstack.flinkx.streaming.api.functions.sink.filesystem.StreamingFileSink;
 
@@ -43,7 +44,6 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.filesystem.stream.PartitionCommitInfo;
 
-import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,6 +82,9 @@ public class StreamingFileWriter<IN> extends AbstractStreamingWriter<IN, Partiti
 
     protected AccumulatorCollector accumulatorCollector;
 
+    /** 对象大小计算器 */
+    protected RowSizeCalculator rowSizeCalculator;
+
     protected LongCounter bytesWriteCounter;
     protected LongCounter durationCounter;
     protected LongCounter numWriteCounter;
@@ -116,6 +119,11 @@ public class StreamingFileWriter<IN> extends AbstractStreamingWriter<IN, Partiti
                 new AccumulatorCollector(
                         (StreamingRuntimeContext) getRuntimeContext(), Metrics.METRIC_SINK_LIST);
         accumulatorCollector.start();
+    }
+
+    /** 初始化累加器收集器 */
+    private void initRowSizeCalculator() {
+        rowSizeCalculator = RowSizeCalculator.getRowSizeCalculator();
     }
 
     private void initRestoreInfo() {
@@ -236,7 +244,7 @@ public class StreamingFileWriter<IN> extends AbstractStreamingWriter<IN, Partiti
     protected void beforeSerialize(long size, RowData rowData) {
         updateDuration();
         numWriteCounter.add(size);
-        bytesWriteCounter.add(ObjectSizeCalculator.getObjectSize(rowData));
+        bytesWriteCounter.add(rowSizeCalculator.getObjectSize(rowData));
         if (checkpointEnabled) {
             snapshotWriteCounter.add(size);
         }

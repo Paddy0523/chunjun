@@ -24,6 +24,7 @@ import com.dtstack.flinkx.dirty.manager.DirtyManager;
 import com.dtstack.flinkx.dirty.utils.DirtyConfUtil;
 import com.dtstack.flinkx.metrics.AccumulatorCollector;
 import com.dtstack.flinkx.metrics.BaseMetric;
+import com.dtstack.flinkx.metrics.RowSizeCalculator;
 import com.dtstack.flinkx.restore.FormatState;
 import com.dtstack.flinkx.util.JsonUtil;
 
@@ -43,7 +44,6 @@ import org.apache.flink.types.RowKind;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
 
-import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +84,8 @@ public class DynamicKafkaDeserializationSchema implements KafkaDeserializationSc
     protected long startTime;
     /** 累加器收集器 */
     protected AccumulatorCollector accumulatorCollector;
+    /** 对象大小计算器 */
+    protected RowSizeCalculator rowSizeCalculator;
     /** 输入指标组 */
     protected transient BaseMetric inputMetric;
     /** checkpoint状态缓存map */
@@ -131,6 +133,7 @@ public class DynamicKafkaDeserializationSchema implements KafkaDeserializationSc
     protected void beforeOpen() {
         initDirtyManager();
         initAccumulatorCollector();
+        initRowSizeCalculator();
         initStatisticsAccumulator();
         initRestoreInfo();
         openInputFormat();
@@ -181,7 +184,7 @@ public class DynamicKafkaDeserializationSchema implements KafkaDeserializationSc
                 numReadCounter.add(1);
             }
             if (bytesReadCounter != null) {
-                bytesReadCounter.add(ObjectSizeCalculator.getObjectSize(record));
+                bytesReadCounter.add(rowSizeCalculator.getObjectSize(record));
             }
         }
     }
@@ -283,6 +286,11 @@ public class DynamicKafkaDeserializationSchema implements KafkaDeserializationSc
                                 lastWriteLocation,
                                 lastWriteNum));
         accumulatorCollector.start();
+    }
+
+    /** 初始化对象大小计算器 */
+    private void initRowSizeCalculator() {
+        rowSizeCalculator = RowSizeCalculator.getRowSizeCalculator();
     }
 
     /** 初始化累加器指标 */

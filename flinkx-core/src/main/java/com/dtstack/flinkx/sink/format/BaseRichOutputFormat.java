@@ -28,6 +28,7 @@ import com.dtstack.flinkx.enums.Semantic;
 import com.dtstack.flinkx.factory.FlinkxThreadFactory;
 import com.dtstack.flinkx.metrics.AccumulatorCollector;
 import com.dtstack.flinkx.metrics.BaseMetric;
+import com.dtstack.flinkx.metrics.RowSizeCalculator;
 import com.dtstack.flinkx.restore.FormatState;
 import com.dtstack.flinkx.sink.DirtyDataManager;
 import com.dtstack.flinkx.sink.ErrorLimiter;
@@ -48,7 +49,6 @@ import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
 import org.apache.flink.table.data.RowData;
 
-import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -150,6 +150,8 @@ public abstract class BaseRichOutputFormat extends RichOutputFormat<RowData>
 
     /** 累加器收集器 */
     protected AccumulatorCollector accumulatorCollector;
+    /** 对象大小计算器 */
+    protected RowSizeCalculator rowSizeCalculator;
 
     protected LongCounter bytesWriteCounter;
     protected LongCounter durationCounter;
@@ -224,6 +226,7 @@ public abstract class BaseRichOutputFormat extends RichOutputFormat<RowData>
 
         if (initAccumulatorAndDirty) {
             initAccumulatorCollector();
+            initRowSizeCalculator();
             initErrorLimiter();
         }
         openInternal(taskNumber, numTasks);
@@ -256,7 +259,7 @@ public abstract class BaseRichOutputFormat extends RichOutputFormat<RowData>
         }
 
         updateDuration();
-        bytesWriteCounter.add(ObjectSizeCalculator.getObjectSize(rowData));
+        bytesWriteCounter.add(rowSizeCalculator.getObjectSize(rowData));
         if (checkpointEnabled) {
             snapshotWriteCounter.add(size);
         }
@@ -365,6 +368,11 @@ public abstract class BaseRichOutputFormat extends RichOutputFormat<RowData>
     private void initAccumulatorCollector() {
         accumulatorCollector = new AccumulatorCollector(context, Metrics.METRIC_SINK_LIST);
         accumulatorCollector.start();
+    }
+
+    /** 初始化对象大小计算器 */
+    private void initRowSizeCalculator() {
+        rowSizeCalculator = RowSizeCalculator.getRowSizeCalculator();
     }
 
     /** 初始化脏数据限制器 */
