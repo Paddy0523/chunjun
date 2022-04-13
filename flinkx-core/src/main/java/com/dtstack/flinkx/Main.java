@@ -180,7 +180,8 @@ public class Main {
         if (null != oldDirtyConf && oldDirtyConf.isValid()) {
             ErrorLimitConf errorLimit = config.getErrorLimit();
             Configuration configuration = new Configuration();
-            configuration.setString("flinkx.dirty-data.max-rows", String.valueOf(errorLimit.getRecord()));
+            configuration.setString(
+                    "flinkx.dirty-data.max-rows", String.valueOf(errorLimit.getRecord()));
             configuration.setString("flinkx.dirty-data.output-type", "hive");
             configuration.setString("flinkx.dirty-data.hive.path", oldDirtyConf.getPath());
             configuration.setString(
