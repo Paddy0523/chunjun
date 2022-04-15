@@ -20,6 +20,7 @@ package com.dtstack.flinkx.connector.postgresql.sink;
 
 import com.dtstack.flinkx.connector.jdbc.converter.JdbcColumnConverter;
 import com.dtstack.flinkx.connector.jdbc.sink.JdbcOutputFormat;
+import com.dtstack.flinkx.connector.postgresql.converter.PostgresqlColumnConverter;
 import com.dtstack.flinkx.connector.postgresql.dialect.PostgresqlDialect;
 import com.dtstack.flinkx.constants.ConstantValue;
 import com.dtstack.flinkx.element.ColumnRowData;
@@ -82,6 +83,10 @@ public class PostgresOutputFormat extends JdbcOutputFormat {
                 LOG.info("write sql:{}", copySql);
             }
             checkUpsert();
+            if (rowConverter instanceof PostgresqlColumnConverter) {
+                ((PostgresqlColumnConverter) rowConverter).setConnection((BaseConnection) dbConn);
+                ((PostgresqlColumnConverter) rowConverter).setFieldTypeList(columnTypeList);
+            }
         } catch (SQLException sqe) {
             throw new IllegalArgumentException("checkUpsert() failed.", sqe);
         }
