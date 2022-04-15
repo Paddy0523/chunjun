@@ -112,8 +112,6 @@ public class DorisDynamicTableFactory implements DynamicTableSinkFactory {
 
         LoadConf loadConf = getLoadConf(config);
         dorisConf.setLoadConf(loadConf);
-        dorisConf.setFieldDelimiter(config.get(DorisOptions.FIELD_DELIMITER));
-        dorisConf.setLineDelimiter(config.get(DorisOptions.LINE_DELIMITER));
         dorisConf.setLoadProperties(new Properties());
         dorisConf.setMaxRetries(config.get(DorisOptions.MAX_RETRIES));
         dorisConf.setWriteMode(config.get(DorisOptions.WRITE_MODE));
