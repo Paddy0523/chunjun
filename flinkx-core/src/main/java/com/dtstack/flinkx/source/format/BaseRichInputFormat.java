@@ -281,7 +281,8 @@ public abstract class BaseRichInputFormat extends RichInputFormat<RowData, Input
 
     /** 初始化对象大小计算器 */
     private void initRowSizeCalculator() {
-        rowSizeCalculator = RowSizeCalculator.getRowSizeCalculator();
+        rowSizeCalculator =
+                RowSizeCalculator.getRowSizeCalculator(config.getRowSizeCalculatorType());
     }
 
     /** 初始化速率限制器 */

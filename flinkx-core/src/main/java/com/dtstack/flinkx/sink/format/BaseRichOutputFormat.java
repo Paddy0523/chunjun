@@ -223,10 +223,10 @@ public abstract class BaseRichOutputFormat extends RichOutputFormat<RowData>
         initStatisticsAccumulator();
         initRestoreInfo();
         initTimingSubmitTask();
+        initRowSizeCalculator();
 
         if (initAccumulatorAndDirty) {
             initAccumulatorCollector();
-            initRowSizeCalculator();
             initErrorLimiter();
         }
         openInternal(taskNumber, numTasks);
@@ -371,8 +371,9 @@ public abstract class BaseRichOutputFormat extends RichOutputFormat<RowData>
     }
 
     /** 初始化对象大小计算器 */
-    private void initRowSizeCalculator() {
-        rowSizeCalculator = RowSizeCalculator.getRowSizeCalculator();
+    protected void initRowSizeCalculator() {
+        rowSizeCalculator =
+                RowSizeCalculator.getRowSizeCalculator(config.getRowSizeCalculatorType());
     }
 
     /** 初始化脏数据限制器 */
