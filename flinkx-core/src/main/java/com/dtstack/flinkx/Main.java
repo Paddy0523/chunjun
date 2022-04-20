@@ -79,6 +79,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -173,7 +174,6 @@ public class Main {
             Options options)
             throws Exception {
         SyncConf config = parseFlinkxConf(job, options);
-        configStreamExecutionEnvironment(env, options, config);
 
         // 兼容 1.10 历史脏数据逻辑。当old dirty conf 有效时，指定类型为hive，且参数为old dirty conf 中的参数
         OldDirtyConf oldDirtyConf = config.getOldDirtyConf();
@@ -187,8 +187,12 @@ public class Main {
             configuration.setString(
                     "flinkx.dirty-data.hive.hadoopConfig",
                     GsonUtil.GSON.toJson(oldDirtyConf.getHadoopConfig()));
+            Map<String, String> toMap = configuration.toMap();
+            addHiveDirty(options, toMap);
             env.getConfig().setGlobalJobParameters(configuration);
         }
+
+        configStreamExecutionEnvironment(env, options, config);
 
         SourceFactory sourceFactory = DataSyncFactoryUtil.discoverSource(config, env);
         DataStream<RowData> dataStreamSource = sourceFactory.createSource();
@@ -240,6 +244,20 @@ public class Main {
         if (env instanceof MyLocalStreamEnvironment) {
             PrintUtil.printResult(result.getAllAccumulatorResults());
         }
+    }
+
+    /**
+     * 为了兼容 1.10 之前的脚本逻辑，需要把原先1.10 的配置转为1.12 对应的配置信息，并放入options中。先将原先的confProp 转为prop，把转化后的1.12
+     * 脏数据参数加入到prop，再转回json，放入options中
+     *
+     * @param options 任务参数 options
+     * @param properties 转化后1.12 对应的参数
+     */
+    private static void addHiveDirty(Options options, Map<String, String> properties)
+            throws Exception {
+        Properties fromJson = PropertiesUtil.parseConf(options.getConfProp());
+        fromJson.putAll(properties);
+        options.setConfProp(GsonUtil.GSON.toJson(fromJson));
     }
 
     /**
