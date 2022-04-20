@@ -18,12 +18,32 @@
 
 package com.dtstack.flinkx.metrics;
 
+import com.dtstack.flinkx.throwable.FlinkxRuntimeException;
+import com.dtstack.flinkx.throwable.UnsupportedTypeException;
+
 import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /** @author liuliu 2022/4/13 */
 public abstract class RowSizeCalculator {
 
     public abstract long getObjectSize(Object object);
+
+    public static RowSizeCalculator getRowSizeCalculator(String calculatorType) {
+        if (calculatorType == null) return getRowSizeCalculator();
+        switch (CalculatorType.getCalculatorTypeByName(calculatorType)) {
+            case TO_STRING_CALCULATOR:
+                return new RowToStringCalculator();
+            case OBJECT_SIZE_CALCULATOR:
+                return getRowSizeCalculator();
+            case UNDO_CALCULATOR:
+                return new UndoCalculator();
+            default:
+                throw new UnsupportedTypeException(calculatorType);
+        }
+    }
 
     /**
      * if jdk support,use {@link jdk.nashorn.internal.ir.debug.ObjectSizeCalculator} else use
@@ -54,6 +74,47 @@ public abstract class RowSizeCalculator {
         @Override
         public long getObjectSize(Object object) {
             return object.toString().getBytes().length;
+        }
+    }
+
+    static class UndoCalculator extends RowSizeCalculator {
+        @Override
+        public long getObjectSize(Object object) {
+            return 0;
+        }
+    }
+
+    public enum CalculatorType {
+        TO_STRING_CALCULATOR("toStringCalculator"),
+        OBJECT_SIZE_CALCULATOR("objectSizeCalculator"),
+        UNDO_CALCULATOR("undoCalculator");
+
+        private String typeName;
+
+        CalculatorType(String typeName) {
+            this.typeName = typeName;
+        }
+
+        public String getTypeName() {
+            return typeName;
+        }
+
+        public void setTypeName(String typeName) {
+            this.typeName = typeName;
+        }
+
+        public static CalculatorType getCalculatorTypeByName(String name) {
+            for (CalculatorType calculatorType : CalculatorType.values()) {
+                if (name.equalsIgnoreCase(calculatorType.typeName)) {
+                    return calculatorType;
+                }
+            }
+            throw new FlinkxRuntimeException(
+                    String.format(
+                            "FlinkX CalculatorType only one of %s",
+                            Arrays.stream(CalculatorType.values())
+                                    .map(CalculatorType::getTypeName)
+                                    .collect(Collectors.toList())));
         }
     }
 }
