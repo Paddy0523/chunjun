@@ -177,20 +177,20 @@ public class Main {
 
         // 兼容 1.10 历史脏数据逻辑。当old dirty conf 有效时，指定类型为hive，且参数为old dirty conf 中的参数
         OldDirtyConf oldDirtyConf = config.getOldDirtyConf();
+        ErrorLimitConf errorLimit = config.getErrorLimit();
+        Configuration configuration = new Configuration();
+        configuration.setString(
+                "flinkx.dirty-data.max-rows", String.valueOf(errorLimit.getRecord()));
         if (null != oldDirtyConf && oldDirtyConf.isValid()) {
-            ErrorLimitConf errorLimit = config.getErrorLimit();
-            Configuration configuration = new Configuration();
-            configuration.setString(
-                    "flinkx.dirty-data.max-rows", String.valueOf(errorLimit.getRecord()));
             configuration.setString("flinkx.dirty-data.output-type", "hive");
             configuration.setString("flinkx.dirty-data.hive.path", oldDirtyConf.getPath());
             configuration.setString(
                     "flinkx.dirty-data.hive.hadoopConfig",
                     GsonUtil.GSON.toJson(oldDirtyConf.getHadoopConfig()));
-            Map<String, String> toMap = configuration.toMap();
-            addHiveDirty(options, toMap);
-            env.getConfig().setGlobalJobParameters(configuration);
         }
+        Map<String, String> toMap = configuration.toMap();
+        addHiveDirty(options, toMap);
+        env.getConfig().setGlobalJobParameters(configuration);
 
         configStreamExecutionEnvironment(env, options, config);
 
@@ -256,7 +256,10 @@ public class Main {
     private static void addHiveDirty(Options options, Map<String, String> properties)
             throws Exception {
         Properties fromJson = PropertiesUtil.parseConf(options.getConfProp());
-        fromJson.putAll(properties);
+        properties.forEach(
+                (key, val) -> {
+                    if (!fromJson.containsKey(key)) fromJson.setProperty(key, val);
+                });
         options.setConfProp(GsonUtil.GSON.toJson(fromJson));
     }
 
