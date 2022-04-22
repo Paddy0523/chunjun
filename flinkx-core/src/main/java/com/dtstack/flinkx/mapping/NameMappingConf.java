@@ -20,6 +20,8 @@
 
 package com.dtstack.flinkx.mapping;
 
+import org.apache.commons.lang.StringUtils;
+
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -71,6 +73,13 @@ public class NameMappingConf implements Serializable {
 
     public void setFieldMappings(Map<String, Object> fieldMappings) {
         this.fieldMappings = fieldMappings;
+    }
+
+    public boolean isEmpty() {
+        return tableMappings.isEmpty()
+                && schemaMappings.isEmpty()
+                && fieldMappings.isEmpty()
+                && StringUtils.isEmpty(pattern);
     }
 
     @Override

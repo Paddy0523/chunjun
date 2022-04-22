@@ -37,13 +37,18 @@ public class MappingClient implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private final NameMapping nameMapping;
+    private boolean turnoff;
 
     public MappingClient(NameMappingConf conf) {
         this.nameMapping = new NameMapping(conf);
+        this.turnoff = conf.isEmpty();
     }
 
     public RowData map(RowData value) {
         // TODO 根据配置选择匹配方式（名称匹配或正则匹配）
+        if (turnoff) {
+            return value;
+        }
         return nameMapping.map(value);
     }
 }
