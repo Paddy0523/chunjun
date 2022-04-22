@@ -57,18 +57,35 @@ public class StreamColumnConverter
 
     private static final long serialVersionUID = 1L;
     private static final AtomicLong id = new AtomicLong(0L);
+    private final List<String> valueList;
 
     public StreamColumnConverter(FlinkxCommonConf commonConf) {
         List<String> typeList =
                 commonConf.getColumn().stream()
                         .map(FieldConf::getType)
                         .collect(Collectors.toList());
+        valueList =
+                commonConf.getColumn().stream()
+                        .map(FieldConf::getValue)
+                        .collect(Collectors.toList());
         super.commonConf = commonConf;
         toInternalConverters = new ArrayList<>(typeList.size());
         toExternalConverters = new ArrayList<>(typeList.size());
 
-        for (String s : typeList) {
-            toInternalConverters.add(createInternalConverter(s));
+        for (int i = 0; i < typeList.size(); i++) {
+            String s = typeList.get(i);
+            String value = valueList.get(i);
+            if (value != null && value.length() != 0) {
+                toInternalConverters.add(
+                        new IDeserializationConverter() {
+                            @Override
+                            public Object deserialize(Object field) throws Exception {
+                                return new StringColumn(value);
+                            }
+                        });
+            } else {
+                toInternalConverters.add(createInternalConverter(s));
+            }
             toExternalConverters.add(
                     wrapIntoNullableExternalConverter(createExternalConverter(s), s));
         }
