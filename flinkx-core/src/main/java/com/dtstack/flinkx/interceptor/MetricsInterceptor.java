@@ -4,6 +4,7 @@ import com.dtstack.flinkx.conf.FlinkxCommonConf;
 import com.dtstack.flinkx.constants.Metrics;
 import com.dtstack.flinkx.metrics.AccumulatorCollector;
 import com.dtstack.flinkx.metrics.BaseMetric;
+import com.dtstack.flinkx.metrics.RowSizeCalculator;
 import com.dtstack.flinkx.restore.FormatState;
 import com.dtstack.flinkx.source.ByteRateLimiter;
 
@@ -12,14 +13,14 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
 import org.apache.flink.table.data.RowData;
 
-import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator;
-
 import java.io.IOException;
 import java.util.Arrays;
 
 public class MetricsInterceptor implements Interceptor {
 
     private AccumulatorCollector accumulatorCollector;
+    /** 对象大小计算器 */
+    private RowSizeCalculator rowSizeCalculator;
     /** checkpoint状态缓存map */
     private FormatState formatState;
 
@@ -45,6 +46,7 @@ public class MetricsInterceptor implements Interceptor {
     @Override
     public void init(Configuration configuration) {
         initAccumulatorCollector();
+        initRowSizeCalculator();
         initStatisticsAccumulator();
         initByteRateLimiter();
         initRestoreInfo();
@@ -69,6 +71,11 @@ public class MetricsInterceptor implements Interceptor {
                                 lastWriteLocation,
                                 lastWriteNum));
         accumulatorCollector.start();
+    }
+
+    /** 初始化对象大小计算器 */
+    private void initRowSizeCalculator() {
+        rowSizeCalculator = RowSizeCalculator.getRowSizeCalculator();
     }
 
     /** 初始化速率限制器 */
@@ -119,7 +126,7 @@ public class MetricsInterceptor implements Interceptor {
             }
             if (bytesReadCounter != null) {
                 bytesReadCounter.add(
-                        ObjectSizeCalculator.getObjectSize(context.get("data", RowData.class)));
+                        rowSizeCalculator.getObjectSize(context.get("data", RowData.class)));
             }
         }
     }

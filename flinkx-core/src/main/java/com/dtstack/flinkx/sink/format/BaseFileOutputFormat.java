@@ -130,7 +130,7 @@ public abstract class BaseFileOutputFormat extends BaseRichOutputFormat {
         lastWriteTime = System.currentTimeMillis();
     }
 
-    private void checkCurrentFileSize() {
+    protected void checkCurrentFileSize() {
         if (numWriteCounter.getLocalValue() < nextNumForCheckDataSize) {
             return;
         }

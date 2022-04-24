@@ -22,6 +22,7 @@ import com.dtstack.flinkx.connector.ftp.conf.FtpConfig;
 import com.dtstack.flinkx.connector.ftp.handler.FtpHandlerFactory;
 import com.dtstack.flinkx.connector.ftp.handler.IFtpHandler;
 import com.dtstack.flinkx.constants.ConstantValue;
+import com.dtstack.flinkx.enums.SizeUnitType;
 import com.dtstack.flinkx.sink.format.BaseFileOutputFormat;
 import com.dtstack.flinkx.throwable.FlinkxRuntimeException;
 import com.dtstack.flinkx.throwable.WriteRecordException;
@@ -99,13 +100,37 @@ public class FtpOutputFormat extends BaseFileOutputFormat {
         String currentBlockTmpPath = tmpPath + File.separatorChar + currentFileName;
         try {
             os = ftpHandler.getOutputStream(currentBlockTmpPath);
-            writer = new BufferedWriter(new OutputStreamWriter(os, ftpConfig.getEncoding()));
+            writer =
+                    new BufferedWriter(new OutputStreamWriter(os, ftpConfig.getEncoding()), 131072);
             LOG.info("subtask:[{}] create block file:{}", taskNumber, currentBlockTmpPath);
         } catch (IOException e) {
             throw new FlinkxRuntimeException(ExceptionUtil.getErrorMessage(e));
         }
 
         currentFileIndex++;
+    }
+
+    @Override
+    protected void checkCurrentFileSize() {
+        if (numWriteCounter.getLocalValue() < nextNumForCheckDataSize) {
+            return;
+        }
+        try {
+            // Does not manually flush cause a message error?
+            writer.flush();
+        } catch (IOException e) {
+            throw new FlinkxRuntimeException("flush failed when check fileSize");
+        }
+        long currentFileSize = getCurrentFileSize();
+        if (currentFileSize > baseFileConf.getMaxFileSize()) {
+            flushDataInternal();
+        }
+        nextNumForCheckDataSize += baseFileConf.getNextCheckRows();
+        LOG.info(
+                "current file: {}, size = {}, nextNumForCheckDataSize = {}",
+                currentFileName,
+                SizeUnitType.readableFileSize(currentFileSize),
+                nextNumForCheckDataSize);
     }
 
     @Override
@@ -118,8 +143,6 @@ public class FtpOutputFormat extends BaseFileOutputFormat {
             String line = (String) rowConverter.toExternal(rowData, "");
             this.writer.write(line);
             this.writer.write(NEWLINE);
-            this.writer.flush();
-            rowsOfCurrentBlock++;
             lastRow = rowData;
         } catch (Exception ex) {
             throw new WriteRecordException(ex.getMessage(), ex);
