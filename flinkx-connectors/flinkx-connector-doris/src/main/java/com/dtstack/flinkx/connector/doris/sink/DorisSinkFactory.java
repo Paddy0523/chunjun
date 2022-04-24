@@ -151,7 +151,7 @@ public class DorisSinkFactory extends SinkFactory {
 
     @Override
     public DataStreamSink<RowData> createSink(DataStream<RowData> dataSet) {
-        DorisOutputFormatBuilder builder = new DorisOutputFormatBuilder();
+        DorisHttpOutputFormatBuilder builder = new DorisHttpOutputFormatBuilder();
         builder.setDorisOptions(options);
         return createOutput(dataSet, builder.finish());
     }

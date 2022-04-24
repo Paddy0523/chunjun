@@ -23,6 +23,9 @@ import com.dtstack.flinkx.connector.doris.options.DorisOptions;
 import com.dtstack.flinkx.connector.doris.options.LoadConf;
 import com.dtstack.flinkx.connector.doris.options.LoadConfBuilder;
 import com.dtstack.flinkx.connector.doris.sink.DorisDynamicTableSink;
+import com.dtstack.flinkx.connector.jdbc.dialect.JdbcDialect;
+import com.dtstack.flinkx.connector.jdbc.table.JdbcDynamicTableFactory;
+import com.dtstack.flinkx.connector.mysql.dialect.MysqlDialect;
 
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ReadableConfig;
@@ -32,6 +35,10 @@ import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.utils.TableSchemaUtils;
 
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -45,33 +52,10 @@ import java.util.stream.Stream;
  * @author xuchao
  * @date 2021-11-21
  */
-public class DorisDynamicTableFactory implements DynamicTableSinkFactory {
+public class DorisDynamicTableFactory extends JdbcDynamicTableFactory
+        implements DynamicTableSinkFactory {
 
     private static final String IDENTIFIER = "doris-x";
-
-    private static final Set<ConfigOption<?>> requiredOptions =
-            Stream.of(DorisOptions.FENODES, DorisOptions.TABLE_IDENTIFY)
-                    .collect(Collectors.toSet());
-
-    private static final Set<ConfigOption<?>> optionalOptions =
-            Stream.of(
-                            DorisOptions.USERNAME,
-                            DorisOptions.PASSWORD,
-                            DorisOptions.REQUEST_TABLET_SIZE,
-                            DorisOptions.REQUEST_CONNECT_TIMEOUT_MS,
-                            DorisOptions.REQUEST_READ_TIMEOUT_MS,
-                            DorisOptions.REQUEST_QUERY_TIMEOUT_SEC,
-                            DorisOptions.REQUEST_RETRIES,
-                            DorisOptions.REQUEST_BATCH_SIZE,
-                            DorisOptions.EXEC_MEM_LIMIT,
-                            DorisOptions.DESERIALIZE_QUEUE_SIZE,
-                            DorisOptions.DESERIALIZE_ARROW_ASYNC,
-                            DorisOptions.FIELD_DELIMITER,
-                            DorisOptions.LINE_DELIMITER,
-                            DorisOptions.MAX_RETRIES,
-                            DorisOptions.WRITE_MODE,
-                            DorisOptions.BATCH_SIZE)
-                    .collect(Collectors.toSet());
 
     @Override
     public DynamicTableSink createDynamicTableSink(Context context) {
@@ -82,6 +66,14 @@ public class DorisDynamicTableFactory implements DynamicTableSinkFactory {
 
         // 2.参数校验
         helper.validate();
+
+        String url = config.get(DorisOptions.URL);
+        List<String> feNodes = config.get(DorisOptions.FENODES);
+
+        if (StringUtils.isEmpty(url) && (null == feNodes || feNodes.isEmpty())) {
+            throw new IllegalArgumentException(
+                    "Choose one of 'url' and 'feNodes', them can not be empty at same time.");
+        }
 
         // 3.封装参数
         TableSchema physicalSchema =
@@ -95,12 +87,17 @@ public class DorisDynamicTableFactory implements DynamicTableSinkFactory {
         DorisConf dorisConf = new DorisConf();
 
         dorisConf.setFeNodes(config.get(DorisOptions.FENODES));
-        String tableIdentify = config.get(DorisOptions.TABLE_IDENTIFY);
-        if (tableIdentify.contains(".")) {
-            String[] identifyInfo = tableIdentify.split("\\.");
-            dorisConf.setDatabase(identifyInfo[0]);
-            dorisConf.setTable(identifyInfo[1]);
-        }
+
+        String schema = config.get(DorisOptions.SCHEMA);
+        String tableName = config.get(DorisOptions.TABLE_NAME);
+        dorisConf.setDatabase(schema);
+        dorisConf.setTable(tableName);
+
+        String url = config.get(DorisOptions.URL);
+        List<String> feNodes = config.get(DorisOptions.FENODES);
+
+        dorisConf.setUrl(url);
+        dorisConf.setFeNodes(feNodes);
 
         if (config.get(DorisOptions.USERNAME) != null) {
             dorisConf.setUsername(config.get(DorisOptions.USERNAME));
@@ -141,12 +138,42 @@ public class DorisDynamicTableFactory implements DynamicTableSinkFactory {
     }
 
     @Override
+    protected JdbcDialect getDialect() {
+        return new MysqlDialect();
+    }
+
+    @Override
     public Set<ConfigOption<?>> requiredOptions() {
-        return requiredOptions;
+        return new HashSet<>();
     }
 
     @Override
     public Set<ConfigOption<?>> optionalOptions() {
-        return optionalOptions;
+        Set<ConfigOption<?>> options = super.optionalOptions();
+        Set<ConfigOption<?>> requiredOptions = super.requiredOptions();
+
+        Set<ConfigOption<?>> optionalOptions =
+                Stream.of(
+                                DorisOptions.USERNAME,
+                                DorisOptions.PASSWORD,
+                                DorisOptions.REQUEST_TABLET_SIZE,
+                                DorisOptions.REQUEST_CONNECT_TIMEOUT_MS,
+                                DorisOptions.REQUEST_READ_TIMEOUT_MS,
+                                DorisOptions.REQUEST_QUERY_TIMEOUT_SEC,
+                                DorisOptions.REQUEST_RETRIES,
+                                DorisOptions.REQUEST_BATCH_SIZE,
+                                DorisOptions.EXEC_MEM_LIMIT,
+                                DorisOptions.DESERIALIZE_QUEUE_SIZE,
+                                DorisOptions.DESERIALIZE_ARROW_ASYNC,
+                                DorisOptions.FIELD_DELIMITER,
+                                DorisOptions.LINE_DELIMITER,
+                                DorisOptions.MAX_RETRIES,
+                                DorisOptions.WRITE_MODE,
+                                DorisOptions.BATCH_SIZE)
+                        .collect(Collectors.toSet());
+
+        options.addAll(optionalOptions);
+        options.addAll(requiredOptions);
+        return options;
     }
 }

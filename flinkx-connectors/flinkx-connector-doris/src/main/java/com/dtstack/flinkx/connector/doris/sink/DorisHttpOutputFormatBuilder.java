@@ -21,23 +21,29 @@ package com.dtstack.flinkx.connector.doris.sink;
 import com.dtstack.flinkx.connector.doris.options.DorisConf;
 import com.dtstack.flinkx.sink.format.BaseRichOutputFormatBuilder;
 
+import java.util.List;
+
 /**
  * Company：www.dtstack.com.
  *
  * @author shitou
  * @date 2021/11/8
  */
-public class DorisOutputFormatBuilder extends BaseRichOutputFormatBuilder {
+public class DorisHttpOutputFormatBuilder extends BaseRichOutputFormatBuilder {
 
-    private final DorisOutputFormat format;
+    private final DorisHttpOutputFormat format;
 
-    public DorisOutputFormatBuilder() {
-        super.format = format = new DorisOutputFormat();
+    public DorisHttpOutputFormatBuilder() {
+        super.format = format = new DorisHttpOutputFormat();
     }
 
     public void setDorisOptions(DorisConf options) {
         format.setOptions(options);
         format.setConfig(options);
+    }
+
+    public void setColumns(List<String> columns) {
+        format.setColumns(columns);
     }
 
     @Override

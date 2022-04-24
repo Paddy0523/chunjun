@@ -18,12 +18,14 @@
 
 package com.dtstack.flinkx.connector.doris.options;
 
-import com.dtstack.flinkx.conf.FlinkxCommonConf;
+import com.dtstack.flinkx.connector.jdbc.conf.JdbcConf;
+import com.dtstack.flinkx.connector.jdbc.conf.SinkConnectionConf;
 import com.dtstack.flinkx.util.GsonUtil;
 import com.dtstack.flinkx.util.MapUtil;
 import com.dtstack.flinkx.util.StringUtil;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -31,7 +33,7 @@ import java.util.Properties;
  * @author tiezhu@dtstack
  * @date 2021/9/16 星期四
  */
-public class DorisConf extends FlinkxCommonConf {
+public class DorisConf extends JdbcConf {
 
     private String database;
 
@@ -44,6 +46,8 @@ public class DorisConf extends FlinkxCommonConf {
     private String writeMode;
 
     private List<String> feNodes;
+
+    private String url;
 
     /** * default value is 3 */
     private Integer maxRetries = 3;
@@ -134,6 +138,14 @@ public class DorisConf extends FlinkxCommonConf {
         this.nameMapped = nameMapped;
     }
 
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
     public String serializeToString() {
         try {
             String optionsJson = GsonUtil.GSON.toJson(this);
@@ -142,5 +154,20 @@ public class DorisConf extends FlinkxCommonConf {
         } catch (IOException e) {
             throw new IllegalArgumentException("Doris Options Serialize to String failed.", e);
         }
+    }
+
+    public JdbcConf setToJdbcConf() {
+        JdbcConf jdbcConf = new JdbcConf();
+        SinkConnectionConf connectionConf = new SinkConnectionConf();
+        connectionConf.setJdbcUrl(url);
+        connectionConf.setPassword(password);
+        connectionConf.setSchema(database);
+        connectionConf.setTable(Collections.singletonList(table));
+        connectionConf.setUsername(username);
+        jdbcConf.setConnection(Collections.singletonList(connectionConf));
+        jdbcConf.setJdbcUrl(url);
+        jdbcConf.setPassword(password);
+        jdbcConf.setUsername(username);
+        return jdbcConf;
     }
 }
