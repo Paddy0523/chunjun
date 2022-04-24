@@ -138,6 +138,7 @@ public class HBaseColumnConverter extends AbstractRowConverter<RowData, RowData,
                 return (IDeserializationConverter<Integer, AbstractBaseColumn>)
                         BigDecimalColumn::new;
             case "BIGINT":
+            case "LONG":
                 return (IDeserializationConverter<Long, AbstractBaseColumn>) BigDecimalColumn::new;
             case "FLOAT":
                 return (IDeserializationConverter<Float, AbstractBaseColumn>) BigDecimalColumn::new;
@@ -216,6 +217,7 @@ public class HBaseColumnConverter extends AbstractRowConverter<RowData, RowData,
             case "INT":
             case "INTEGER":
                 return (rowData, index, data) -> data[index] = rowData.getInt(index);
+            case "LONG":
             case "BIGINT":
                 return (rowData, index, data) -> data[index] = rowData.getLong(index);
             case "FLOAT":
