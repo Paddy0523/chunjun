@@ -33,10 +33,9 @@ import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.connector.sink.SinkFunctionProvider;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.util.CollectionUtil;
 
 import org.apache.commons.lang3.StringUtils;
-
-import org.apache.flink.util.CollectionUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;

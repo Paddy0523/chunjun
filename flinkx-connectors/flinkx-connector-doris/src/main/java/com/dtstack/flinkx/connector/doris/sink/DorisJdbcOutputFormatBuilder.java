@@ -26,6 +26,5 @@ public class DorisJdbcOutputFormatBuilder extends JdbcOutputFormatBuilder {
     }
 
     @Override
-    protected void checkFormat() {
-    }
+    protected void checkFormat() {}
 }
