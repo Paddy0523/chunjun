@@ -44,6 +44,7 @@ import io.vertx.core.json.JsonArray;
 import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.Time;
@@ -146,7 +147,12 @@ public class JdbcColumnConverter
             case BIGINT:
                 return val -> new BigDecimalColumn((Long) val);
             case DECIMAL:
-                return val -> new BigDecimalColumn((BigDecimal) val);
+                return val -> {
+                    if (val instanceof BigInteger) {
+                        return new BigDecimalColumn((BigInteger) val);
+                    }
+                    return new BigDecimalColumn((BigDecimal) val);
+                };
             case CHAR:
             case VARCHAR:
                 return val -> new StringColumn((String) val);
