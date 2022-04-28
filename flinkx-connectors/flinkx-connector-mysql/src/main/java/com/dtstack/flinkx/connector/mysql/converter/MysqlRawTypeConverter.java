@@ -39,7 +39,7 @@ public class MysqlRawTypeConverter {
             case "BIGINT":
                 return DataTypes.BIGINT();
             case "BIGINT UNSIGNED":
-                return DataTypes.DECIMAL(20,0);
+                return DataTypes.DECIMAL(20, 0);
             case "REAL":
             case "FLOAT":
             case "FLOAT UNSIGNED":
