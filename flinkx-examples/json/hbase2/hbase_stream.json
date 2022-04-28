@@ -1,0 +1,93 @@
+{
+  "job": {
+    "content": [
+      {
+        "reader": {
+          "table" : {
+            "tableName": "test_sink"
+          },
+          "name": "hbase2reader",
+          "parameter": {
+            "hbaseConfig": {
+              "hbase.zookeeper.property.clientPort": "2181",
+              "hbase.cluster.distributed": "true",
+              "hbase.zookeeper.quorum": "dwhdp001,dwhdp002,dwhdp003",
+              "zookeeper.znode.parent": "/hbase-unsecure"
+            },
+            "changeLog": "sb5",
+            "encoding": "utf-8",
+            "column": [
+              {
+                "name": "rowkey",
+                "type": "string"
+              },
+              {
+                "name": "info:_int_",
+                "type": "int"
+              },
+              {
+                "name": "info:_string_",
+                "type": "string"
+              },
+              {
+                "name": "detail:_double_",
+                "type": "double"
+              },
+              {
+                "name": "detail:_long_",
+                "type": "BIGINT"
+              },
+              {
+                "name": "detail:_boolean_",
+                "type": "boolean"
+              },
+              {
+                "name": "detail:_bigdecimal_",
+                "type": "decimal"
+              },
+              {
+                "name": "detail:_short_",
+                "type": "SMALLINT"
+              },
+              {
+                "name": "detail:_float_",
+                "type": "float"
+              }
+            ],
+            "startRowkey": "",
+            "endRowkey": "",
+            "isBinaryRowkey": true
+          }
+        },
+        "writer": {
+          "parameter": {
+            "print": true
+          },
+          "name": "streamwriter"
+        }
+      }
+    ],
+    "setting": {
+      "speed": {
+        "channel": 1,
+        "bytes": 0
+      },
+      "errorLimit": {
+        "record": 100
+      },
+      "restore": {
+        "maxRowNumForCheckpoint": 0,
+        "isRestore": false,
+        "isStream": false,
+        "restoreColumnName": "",
+        "restoreColumnIndex": 0
+      },
+      "log": {
+        "isLogger": false,
+        "level": "debug",
+        "path": "",
+        "pattern": ""
+      }
+    }
+  }
+}
