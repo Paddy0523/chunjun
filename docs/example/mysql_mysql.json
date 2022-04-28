@@ -1,0 +1,75 @@
+{
+  "job" : {
+    "content" : [ {
+      "reader": {
+        "parameter": {
+          "username": "root",
+          "password": "dtstack123456",
+          "connection": [{
+            "jdbcUrl": ["jdbc:mysql://localhost:3306/dtstack_data_sync?useSSL=false"],
+            "table": [
+              "people"
+            ]
+          }],
+          "column": [{
+            "name": "id",
+            "type": "int"
+          },{
+            "name":"name",
+            "type":"varchar"
+          },{
+            "name": "uuid",
+            "type": "varchar"
+          }]
+        },
+        "name": "mysqlreader"
+      },
+      "writer": {
+        "name": "mysqlwriter",
+        "parameter": {
+          "username": "root",
+          "password": "dtstack123456",
+          "connection": [
+            {
+              "jdbcUrl": "jdbc:mysql://localhost:3306/dtstack_data_sync?useSSL=false",
+              "table": [
+                "people_bak_20210421"
+              ]
+            }
+          ],
+          "postSql": [],
+          "batchSize": 0,
+          "writeMode": "insert",
+          "column": [
+            {
+              "name": "id",
+              "type": "int"
+            },
+            {
+              "name": "name",
+              "type": "varchar"
+            },
+            {
+              "name": "uuid",
+              "type": "varchar"
+            }
+          ]
+        }
+      }
+    }
+    ],
+    "setting" : {
+      "speed" : {
+        "channel" : 1,
+        "bytes" : 10
+      },
+      "restore" : {
+        "isStream" : false,
+        "isRestore" : true,
+        "restoreColumnName" : "id",
+        "restoreColumnIndex" : 0,
+        "maxRowNumForCheckpoint" : 10000
+      }
+    }
+  }
+}
