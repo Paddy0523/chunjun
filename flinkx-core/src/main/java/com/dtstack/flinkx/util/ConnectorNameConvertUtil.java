@@ -35,6 +35,7 @@ public class ConnectorNameConvertUtil {
     static {
         connectorNameMap.put("es", new Tuple2<>("elasticsearch6", "elasticsearch6"));
         connectorNameMap.put("hbase", new Tuple2<>("hbase14", "HBase14"));
+        connectorNameMap.put("hbase2", new Tuple2<>("hbase2", "HBase2"));
         connectorNameMap.put("tidb", new Tuple2<>("mysql", "mysql"));
         connectorNameMap.put("restapi", new Tuple2<>("http", "http"));
         connectorNameMap.put("adbpostgresql", new Tuple2<>("postgresql", "postgresql"));
