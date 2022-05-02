@@ -23,6 +23,7 @@ import com.dtstack.flinkx.connector.jdbc.converter.JdbcColumnConverter;
 import com.dtstack.flinkx.connector.jdbc.statement.FieldNamedPreparedStatement;
 import com.dtstack.flinkx.converter.IDeserializationConverter;
 import com.dtstack.flinkx.converter.ISerializationConverter;
+import com.dtstack.flinkx.element.AbstractBaseColumn;
 import com.dtstack.flinkx.element.ColumnRowData;
 import com.dtstack.flinkx.element.column.BigDecimalColumn;
 import com.dtstack.flinkx.element.column.BooleanColumn;
@@ -35,9 +36,8 @@ import org.apache.flink.table.types.logical.RowType;
 
 import org.apache.hadoop.hive.common.type.HiveDate;
 
-import java.math.BigDecimal;
 import java.sql.Date;
-import java.sql.Timestamp;
+import java.sql.ResultSet;
 import java.util.Calendar;
 
 import static com.dtstack.flinkx.connector.inceptor.util.InceptorDbUtil.LOCAL_TIMEZONE;
@@ -52,7 +52,7 @@ public class InceptorHyberbaseColumnConvert extends JdbcColumnConverter {
     @Override
     protected ISerializationConverter<FieldNamedPreparedStatement>
             wrapIntoNullableExternalConverter(
-                    ISerializationConverter serializationConverter, LogicalType type) {
+                    ISerializationConverter serializationConverter, Integer integer) {
         return (val, index, statement) -> {
             if (((ColumnRowData) val).getField(index) == null) {
                 statement.setNull(index, 0);
@@ -63,26 +63,28 @@ public class InceptorHyberbaseColumnConvert extends JdbcColumnConverter {
     }
 
     @Override
-    protected IDeserializationConverter createInternalConverter(LogicalType type) {
+    protected IDeserializationConverter<ResultSet, AbstractBaseColumn> createInternalConverter(
+            Integer index) {
+        LogicalType type = rowType.getTypeAt(index - 1);
         switch (type.getTypeRoot()) {
             case VARCHAR:
-                return val -> new StringColumn((String) val);
+                return resultSet -> new StringColumn(resultSet.getString(index));
             case INTEGER:
             case SMALLINT:
-                return val -> new BigDecimalColumn(new BigDecimal(val.toString()).intValue());
+                return resultSet -> new BigDecimalColumn(resultSet.getInt(index));
             case BOOLEAN:
-                return val -> new BooleanColumn(Boolean.parseBoolean(val.toString()));
+                return resultSet -> new BooleanColumn(resultSet.getBoolean(index));
             case TINYINT:
-                return val -> new BigDecimalColumn(new BigDecimal(val.toString()).byteValue());
+                return resultSet -> new BigDecimalColumn(resultSet.getByte(index));
             case BIGINT:
-                return val -> new BigDecimalColumn((Long) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getLong(index));
             case DOUBLE:
-                return val -> new BigDecimalColumn((Double) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getDouble(index));
             case DECIMAL:
-                return val -> new BigDecimalColumn((BigDecimal) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getBigDecimal(index));
             case DATE:
-                return val -> {
-                    HiveDate hiveDate = (HiveDate) val;
+                return resultSet -> {
+                    HiveDate hiveDate = (HiveDate) resultSet.getDate(index);
                     long time = hiveDate.getTime();
                     Calendar c = Calendar.getInstance(LOCAL_TIMEZONE.get());
                     c.setTime(hiveDate);
@@ -95,7 +97,7 @@ public class InceptorHyberbaseColumnConvert extends JdbcColumnConverter {
                     }
                 };
             case TIMESTAMP_WITHOUT_TIME_ZONE:
-                return val -> new TimestampColumn((Timestamp) val, 9);
+                return resultSet -> new TimestampColumn(resultSet.getTimestamp(index), 9);
             default:
                 throw new UnsupportedOperationException("Unsupported type:" + type);
         }
@@ -103,7 +105,8 @@ public class InceptorHyberbaseColumnConvert extends JdbcColumnConverter {
 
     @Override
     protected ISerializationConverter<FieldNamedPreparedStatement> createExternalConverter(
-            LogicalType type) {
+            Integer integer) {
+        LogicalType type = rowType.getTypeAt(integer);
         switch (type.getTypeRoot()) {
             case VARCHAR:
                 return (val, index, statement) ->

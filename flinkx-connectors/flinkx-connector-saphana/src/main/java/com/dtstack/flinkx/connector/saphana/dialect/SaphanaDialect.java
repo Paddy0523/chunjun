@@ -27,7 +27,6 @@ import com.dtstack.flinkx.converter.AbstractRowConverter;
 import com.dtstack.flinkx.converter.RawTypeConverter;
 import com.dtstack.flinkx.enums.EDatabaseType;
 
-import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 
 import io.vertx.core.json.JsonArray;
@@ -114,7 +113,7 @@ public class SaphanaDialect implements JdbcDialect {
     }
 
     @Override
-    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, LogicalType>
+    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, Integer>
             getColumnConverter(RowType rowType, FlinkxCommonConf commonConf) {
         return new SaphanaColumnConverter(rowType, commonConf);
     }

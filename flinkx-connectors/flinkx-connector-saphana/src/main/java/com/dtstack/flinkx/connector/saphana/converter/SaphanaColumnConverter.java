@@ -40,10 +40,7 @@ import org.apache.flink.table.types.logical.TimestampType;
 import com.sap.db.jdbc.HanaClob;
 
 import java.io.BufferedReader;
-import java.math.BigDecimal;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
+import java.sql.ResultSet;
 
 /** Base class for all converters that convert between JDBC object and Flink internal object. */
 public class SaphanaColumnConverter extends JdbcColumnConverter {
@@ -53,27 +50,30 @@ public class SaphanaColumnConverter extends JdbcColumnConverter {
     }
 
     @Override
-    protected IDeserializationConverter createInternalConverter(LogicalType type) {
+    protected IDeserializationConverter<ResultSet, AbstractBaseColumn> createInternalConverter(
+            Integer index) {
+        LogicalType type = rowType.getTypeAt(index);
         switch (type.getTypeRoot()) {
             case BOOLEAN:
-                return val -> new BooleanColumn(Boolean.parseBoolean(val.toString()));
+                return resultSet -> new BooleanColumn(resultSet.getBoolean(index));
             case TINYINT:
-                return val -> new BigDecimalColumn(((Short) val).byteValue());
+                return resultSet -> new BigDecimalColumn(resultSet.getByte(index));
             case SMALLINT:
-                return val -> new BigDecimalColumn(((Short) val));
+                return resultSet -> new BigDecimalColumn(resultSet.getShort(index));
             case INTEGER:
-                return val -> new BigDecimalColumn((Integer) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getInt(index));
             case FLOAT:
-                return val -> new BigDecimalColumn((Float) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getFloat(index));
             case DOUBLE:
-                return val -> new BigDecimalColumn((Double) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getDouble(index));
             case BIGINT:
-                return val -> new BigDecimalColumn((Long) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getLong(index));
             case DECIMAL:
-                return val -> new BigDecimalColumn((BigDecimal) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getBigDecimal(index));
             case CHAR:
             case VARCHAR:
-                return val -> {
+                return resultSet -> {
+                    Object val = resultSet.getObject(index);
                     if (type instanceof ClobType) {
                         HanaClob clob = (HanaClob) val;
                         try (BufferedReader bf = new BufferedReader(clob.getCharacterStream())) {
@@ -90,23 +90,22 @@ public class SaphanaColumnConverter extends JdbcColumnConverter {
                             return new StringColumn(stringBuilder.toString());
                         }
                     } else {
-                        return new StringColumn((String) val);
+                        return new StringColumn(resultSet.getString(index));
                     }
                 };
             case DATE:
-                return val -> new SqlDateColumn((Date) val);
+                return resultSet -> new SqlDateColumn(resultSet.getDate(index));
             case TIME_WITHOUT_TIME_ZONE:
-                return val -> new TimeColumn((Time) val);
+                return resultSet -> new TimeColumn(resultSet.getTime(index));
             case TIMESTAMP_WITH_TIME_ZONE:
             case TIMESTAMP_WITHOUT_TIME_ZONE:
-                return (IDeserializationConverter<Object, AbstractBaseColumn>)
-                        val -> {
-                            int precision = ((TimestampType) (type)).getPrecision();
-                            return new TimestampColumn((Timestamp) val, precision);
-                        };
+                return resultSet -> {
+                    int precision = ((TimestampType) (type)).getPrecision();
+                    return new TimestampColumn(resultSet.getTimestamp(index), precision);
+                };
             case BINARY:
             case VARBINARY:
-                return val -> new BytesColumn((byte[]) val);
+                return resultSet -> new BytesColumn(resultSet.getBytes(index));
             default:
                 throw new UnsupportedOperationException("Unsupported type:" + type);
         }
@@ -114,7 +113,8 @@ public class SaphanaColumnConverter extends JdbcColumnConverter {
 
     @Override
     protected ISerializationConverter<FieldNamedPreparedStatement> createExternalConverter(
-            LogicalType type) {
+            Integer integer) {
+        LogicalType type = rowType.getTypeAt(integer);
         switch (type.getTypeRoot()) {
             case BOOLEAN:
                 return (val, index, statement) ->

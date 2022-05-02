@@ -81,7 +81,7 @@ public interface JdbcDialect extends Serializable {
      *
      * @return a row converter for the database
      */
-    default AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, LogicalType>
+    default AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, Integer>
             getColumnConverter(RowType rowType) {
         return getColumnConverter(rowType, null);
     }
@@ -91,7 +91,7 @@ public interface JdbcDialect extends Serializable {
      *
      * @return a row converter for the database
      */
-    default AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, LogicalType>
+    default AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, Integer>
             getColumnConverter(RowType rowType, FlinkxCommonConf commonConf) {
         return new JdbcColumnConverter(rowType, commonConf);
     }

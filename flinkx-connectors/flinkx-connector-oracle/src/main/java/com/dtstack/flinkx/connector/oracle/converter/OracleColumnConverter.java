@@ -23,6 +23,7 @@ import com.dtstack.flinkx.connector.jdbc.converter.JdbcColumnConverter;
 import com.dtstack.flinkx.connector.jdbc.statement.FieldNamedPreparedStatement;
 import com.dtstack.flinkx.converter.IDeserializationConverter;
 import com.dtstack.flinkx.converter.ISerializationConverter;
+import com.dtstack.flinkx.element.AbstractBaseColumn;
 import com.dtstack.flinkx.element.ColumnRowData;
 import com.dtstack.flinkx.element.column.BigDecimalColumn;
 import com.dtstack.flinkx.element.column.BooleanColumn;
@@ -40,8 +41,7 @@ import oracle.sql.TIMESTAMP;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.StringReader;
-import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.sql.ResultSet;
 
 /**
  * company www.dtstack.com
@@ -55,46 +55,50 @@ public class OracleColumnConverter extends JdbcColumnConverter {
     }
 
     @Override
-    protected IDeserializationConverter createInternalConverter(LogicalType type) {
+    protected IDeserializationConverter<ResultSet, AbstractBaseColumn> createInternalConverter(
+            Integer index) {
+        LogicalType type = rowType.getTypeAt(index - 1);
         switch (type.getTypeRoot()) {
             case BOOLEAN:
-                return val -> new BooleanColumn(Boolean.parseBoolean(val.toString()));
+                return resultSet -> new BooleanColumn(resultSet.getBoolean(index));
             case TINYINT:
-                return val -> new BigDecimalColumn(((Integer) val).byteValue());
+                return resultSet -> new BigDecimalColumn(resultSet.getByte(index));
             case SMALLINT:
             case INTEGER:
-                return val -> new BigDecimalColumn((Integer) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getInt(index));
             case FLOAT:
-                return val -> new BigDecimalColumn((Float) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getFloat(index));
             case DOUBLE:
-                return val -> new BigDecimalColumn((Double) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getDouble(index));
             case BIGINT:
-                return val -> new BigDecimalColumn((Long) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getLong(index));
             case DECIMAL:
-                return val -> new BigDecimalColumn((BigDecimal) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getBigDecimal(index));
             case CHAR:
             case VARCHAR:
                 if (type instanceof ClobType) {
-                    return val -> {
-                        oracle.sql.CLOB clob = (oracle.sql.CLOB) val;
+                    return resultSet -> {
+                        oracle.sql.CLOB clob = (oracle.sql.CLOB) resultSet.getObject(index);
                         return new StringColumn(ConvertUtil.convertClob(clob));
                     };
                 }
-                return val -> new StringColumn((String) val);
+                return resultSet -> new StringColumn(resultSet.getString(index));
             case DATE:
-                return val -> new TimestampColumn((Timestamp) val, 0);
+                return resultSet -> new TimestampColumn(resultSet.getTimestamp(index), 0);
             case TIMESTAMP_WITH_TIME_ZONE:
             case TIMESTAMP_WITHOUT_TIME_ZONE:
-                return val -> new TimestampColumn(((TIMESTAMP) val).timestampValue());
+                return resultSet ->
+                        new TimestampColumn(
+                                ((TIMESTAMP) resultSet.getObject(index)).timestampValue());
             case BINARY:
             case VARBINARY:
-                return val -> {
+                return resultSet -> {
                     if (type instanceof BlobType) {
-                        oracle.sql.BLOB blob = (oracle.sql.BLOB) val;
+                        oracle.sql.BLOB blob = (oracle.sql.BLOB) resultSet.getObject(index);
                         byte[] bytes = ConvertUtil.toByteArray(blob);
                         return new BytesColumn(bytes);
                     } else {
-                        return new BytesColumn((byte[]) val);
+                        return new BytesColumn(resultSet.getBytes(index));
                     }
                 };
             default:
@@ -105,14 +109,15 @@ public class OracleColumnConverter extends JdbcColumnConverter {
     @Override
     protected ISerializationConverter<FieldNamedPreparedStatement>
             wrapIntoNullableExternalConverter(
-                    ISerializationConverter serializationConverter, LogicalType type) {
+                    ISerializationConverter serializationConverter, Integer integer) {
         return (val, index, statement) -> {
             if (((ColumnRowData) val).getField(index) == null) {
                 try {
                     final int sqlType =
                             JdbcTypeUtil.typeInformationToSqlType(
                                     TypeConversions.fromDataTypeToLegacyInfo(
-                                            TypeConversions.fromLogicalToDataType(type)));
+                                            TypeConversions.fromLogicalToDataType(
+                                                    rowType.getTypeAt(integer))));
                     statement.setNull(index, sqlType);
                 } catch (Exception e) {
                     statement.setObject(index, null);
@@ -125,7 +130,8 @@ public class OracleColumnConverter extends JdbcColumnConverter {
 
     @Override
     protected ISerializationConverter<FieldNamedPreparedStatement> createExternalConverter(
-            LogicalType type) {
+            Integer integer) {
+        LogicalType type = rowType.getTypeAt(integer);
         switch (type.getTypeRoot()) {
             case BOOLEAN:
                 return (val, index, statement) ->

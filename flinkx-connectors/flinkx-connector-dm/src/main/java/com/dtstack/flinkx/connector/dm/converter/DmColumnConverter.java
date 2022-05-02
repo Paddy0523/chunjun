@@ -38,10 +38,7 @@ import org.apache.flink.table.types.logical.YearMonthIntervalType;
 import dm.jdbc.driver.DmdbBlob;
 import dm.jdbc.driver.DmdbClob;
 
-import java.math.BigDecimal;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
+import java.sql.ResultSet;
 
 /** @author kunni */
 public class DmColumnConverter extends JdbcColumnConverter {
@@ -51,12 +48,15 @@ public class DmColumnConverter extends JdbcColumnConverter {
     }
 
     @Override
-    protected IDeserializationConverter createInternalConverter(LogicalType type) {
+    protected IDeserializationConverter<ResultSet, AbstractBaseColumn> createInternalConverter(
+            Integer index) {
+        LogicalType type = rowType.getTypeAt(index - 1);
         switch (type.getTypeRoot()) {
             case BOOLEAN:
-                return val -> new BooleanColumn(Boolean.parseBoolean(val.toString()));
+                return resultSet -> new BooleanColumn(resultSet.getBoolean(index));
             case TINYINT:
-                return val -> {
+                return resultSet -> {
+                    Object val = resultSet.getObject(index);
                     if (val instanceof Integer) {
                         return new BigDecimalColumn(((Integer) val).byteValue());
                     } else if (val instanceof Short) {
@@ -67,7 +67,8 @@ public class DmColumnConverter extends JdbcColumnConverter {
                 };
             case SMALLINT:
             case INTEGER:
-                return val -> {
+                return resultSet -> {
+                    Object val = resultSet.getObject(index);
                     if (val instanceof Byte) {
                         return new BigDecimalColumn(((Byte) val).intValue());
                     } else if (val instanceof Short) {
@@ -77,32 +78,30 @@ public class DmColumnConverter extends JdbcColumnConverter {
                     }
                 };
             case INTERVAL_YEAR_MONTH:
-                return (IDeserializationConverter<Object, AbstractBaseColumn>)
-                        val -> {
-                            YearMonthIntervalType yearMonthIntervalType =
-                                    (YearMonthIntervalType) type;
-                            switch (yearMonthIntervalType.getResolution()) {
-                                case YEAR:
-                                    return new BigDecimalColumn(
-                                            Integer.parseInt(String.valueOf(val).substring(0, 4)));
-                                case MONTH:
-                                case YEAR_TO_MONTH:
-                                default:
-                                    throw new UnsupportedOperationException(
-                                            "jdbc converter only support YEAR");
-                            }
-                        };
+                return resultSet -> {
+                    YearMonthIntervalType yearMonthIntervalType = (YearMonthIntervalType) type;
+                    switch (yearMonthIntervalType.getResolution()) {
+                        case YEAR:
+                            return new BigDecimalColumn(resultSet.getInt(index));
+                        case MONTH:
+                        case YEAR_TO_MONTH:
+                        default:
+                            throw new UnsupportedOperationException(
+                                    "jdbc converter only support YEAR");
+                    }
+                };
             case FLOAT:
-                return val -> new BigDecimalColumn((Float) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getFloat(index));
             case DOUBLE:
-                return val -> new BigDecimalColumn((Double) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getDouble(index));
             case BIGINT:
-                return val -> new BigDecimalColumn((Long) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getLong(index));
             case DECIMAL:
-                return val -> new BigDecimalColumn((BigDecimal) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getBigDecimal(index));
             case CHAR:
             case VARCHAR:
-                return val -> {
+                return resultSet -> {
+                    Object val = resultSet.getObject(index);
                     // support text type
                     if (val instanceof DmdbClob) {
                         try {
@@ -127,15 +126,16 @@ public class DmColumnConverter extends JdbcColumnConverter {
                     }
                 };
             case DATE:
-                return val -> new SqlDateColumn(Date.valueOf(String.valueOf(val)));
+                return resultSet -> new SqlDateColumn(resultSet.getDate(index));
             case TIME_WITHOUT_TIME_ZONE:
-                return val -> new TimeColumn(Time.valueOf(String.valueOf(val)));
+                return resultSet -> new TimeColumn(resultSet.getTime(index));
             case TIMESTAMP_WITH_TIME_ZONE:
             case TIMESTAMP_WITHOUT_TIME_ZONE:
-                return val -> new TimestampColumn((Timestamp) val);
+                return resultSet -> new TimestampColumn(resultSet.getTimestamp(index));
             case BINARY:
             case VARBINARY:
-                return val -> {
+                return resultSet -> {
+                    Object val = resultSet.getObject(index);
                     if (val instanceof DmdbBlob) {
                         try {
                             return new StringColumn(

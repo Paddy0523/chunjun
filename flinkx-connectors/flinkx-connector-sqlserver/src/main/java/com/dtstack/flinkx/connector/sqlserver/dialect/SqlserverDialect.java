@@ -100,13 +100,13 @@ public class SqlserverDialect implements JdbcDialect {
     }
 
     @Override
-    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, LogicalType>
+    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, Integer>
             getColumnConverter(RowType rowType) {
         return getColumnConverter(rowType, null);
     }
 
     @Override
-    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, LogicalType>
+    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, Integer>
             getColumnConverter(RowType rowType, FlinkxCommonConf commonConf) {
         if (useJtdsDriver) {
             return new SqlserverJtdsColumnConverter(rowType, commonConf);

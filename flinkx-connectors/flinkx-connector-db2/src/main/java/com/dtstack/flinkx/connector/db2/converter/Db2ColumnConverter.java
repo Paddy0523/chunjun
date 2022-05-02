@@ -20,6 +20,7 @@ package com.dtstack.flinkx.connector.db2.converter;
 import com.dtstack.flinkx.conf.FlinkxCommonConf;
 import com.dtstack.flinkx.connector.jdbc.converter.JdbcColumnConverter;
 import com.dtstack.flinkx.converter.IDeserializationConverter;
+import com.dtstack.flinkx.element.AbstractBaseColumn;
 import com.dtstack.flinkx.element.column.BigDecimalColumn;
 import com.dtstack.flinkx.element.column.BooleanColumn;
 import com.dtstack.flinkx.element.column.BytesColumn;
@@ -31,11 +32,8 @@ import com.dtstack.flinkx.element.column.TimestampColumn;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 
-import java.math.BigDecimal;
 import java.sql.Blob;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
+import java.sql.ResultSet;
 
 /**
  * convert db2 type to flink type Company: www.dtstack.com
@@ -52,41 +50,43 @@ public class Db2ColumnConverter extends JdbcColumnConverter {
     /**
      * override reason: blob in db2 need use getBytes.
      *
-     * @param type
+     * @param index
      * @return
      */
     @Override
-    protected IDeserializationConverter createInternalConverter(LogicalType type) {
+    protected IDeserializationConverter<ResultSet, AbstractBaseColumn> createInternalConverter(
+            Integer index) {
+        LogicalType type = rowType.getTypeAt(index - 1);
         switch (type.getTypeRoot()) {
             case BOOLEAN:
-                return val -> new BooleanColumn(Boolean.parseBoolean(val.toString()));
+                return resultSet -> new BooleanColumn(resultSet.getBoolean(index));
             case TINYINT:
-                return val -> new BigDecimalColumn((Byte) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getByte(index));
             case SMALLINT:
             case INTEGER:
-                return val -> new BigDecimalColumn((Integer) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getInt(index));
             case FLOAT:
-                return val -> new BigDecimalColumn((Float) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getFloat(index));
             case DOUBLE:
-                return val -> new BigDecimalColumn((Double) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getDouble(index));
             case BIGINT:
-                return val -> new BigDecimalColumn((Long) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getLong(index));
             case DECIMAL:
-                return val -> new BigDecimalColumn((BigDecimal) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getBigDecimal(index));
             case CHAR:
             case VARCHAR:
-                return val -> new StringColumn((String) val);
+                return resultSet -> new StringColumn(resultSet.getString(index));
             case DATE:
-                return val -> new SqlDateColumn((Date) val);
+                return resultSet -> new SqlDateColumn(resultSet.getDate(index));
             case TIME_WITHOUT_TIME_ZONE:
-                return val -> new TimeColumn((Time) val);
+                return resultSet -> new TimeColumn(resultSet.getTime(index));
             case TIMESTAMP_WITH_TIME_ZONE:
             case TIMESTAMP_WITHOUT_TIME_ZONE:
-                return val -> new TimestampColumn((Timestamp) val);
+                return resultSet -> new TimestampColumn(resultSet.getTimestamp(index));
             case BINARY:
             case VARBINARY:
-                return val -> {
-                    Blob blob = (com.ibm.db2.jcc.am.c6) val;
+                return resultSet -> {
+                    Blob blob = (com.ibm.db2.jcc.am.c6) resultSet.getObject(index);
                     int length = 0;
                     try {
                         length = (int) blob.length();

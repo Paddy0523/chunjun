@@ -43,17 +43,12 @@ import org.apache.flink.table.types.logical.YearMonthIntervalType;
 import io.vertx.core.json.JsonArray;
 import org.apache.commons.lang3.StringUtils;
 
-import java.math.BigDecimal;
-import java.sql.Date;
 import java.sql.ResultSet;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.util.List;
 
 /** Base class for all converters that convert between JDBC object and Flink internal object. */
 public class JdbcColumnConverter
-        extends AbstractRowConverter<
-                ResultSet, JsonArray, FieldNamedPreparedStatement, LogicalType> {
+        extends AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, Integer> {
 
     public JdbcColumnConverter(RowType rowType) {
         this(rowType, null);
@@ -63,18 +58,16 @@ public class JdbcColumnConverter
         super(rowType, commonConf);
         for (int i = 0; i < rowType.getFieldCount(); i++) {
             toInternalConverters.add(
-                    wrapIntoNullableInternalConverter(
-                            createInternalConverter(rowType.getTypeAt(i))));
+                    wrapIntoNullableInternalConverter(createInternalConverter(i + 1)));
             toExternalConverters.add(
-                    wrapIntoNullableExternalConverter(
-                            createExternalConverter(fieldTypes[i]), fieldTypes[i]));
+                    wrapIntoNullableExternalConverter(createExternalConverter(i), i));
         }
     }
 
     @Override
     protected ISerializationConverter<FieldNamedPreparedStatement>
             wrapIntoNullableExternalConverter(
-                    ISerializationConverter serializationConverter, LogicalType type) {
+                    ISerializationConverter serializationConverter, Integer integer) {
         return (val, index, statement) -> {
             if (((ColumnRowData) val).getField(index) == null) {
                 statement.setObject(index, null);
@@ -93,10 +86,9 @@ public class JdbcColumnConverter
         for (FieldConf fieldConf : fieldConfList) {
             AbstractBaseColumn baseColumn = null;
             if (StringUtils.isBlank(fieldConf.getValue())) {
-                Object field = resultSet.getObject(converterIndex + 1);
                 baseColumn =
                         (AbstractBaseColumn)
-                                toInternalConverters.get(converterIndex).deserialize(field);
+                                toInternalConverters.get(converterIndex).deserialize(result);
                 converterIndex++;
             }
             result.addField(assembleFieldProps(fieldConf, baseColumn));
@@ -114,56 +106,52 @@ public class JdbcColumnConverter
     }
 
     @Override
-    protected IDeserializationConverter createInternalConverter(LogicalType type) {
+    protected IDeserializationConverter<ResultSet, AbstractBaseColumn> createInternalConverter(
+            Integer index) {
+        LogicalType type = rowType.getTypeAt(index - 1);
         switch (type.getTypeRoot()) {
             case BOOLEAN:
-                return val -> new BooleanColumn(Boolean.parseBoolean(val.toString()));
+                return resultSet -> new BooleanColumn(resultSet.getBoolean(index));
             case TINYINT:
-                return val -> new BigDecimalColumn(((Integer) val).byteValue());
+                return resultSet -> new BigDecimalColumn(resultSet.getByte(index));
             case SMALLINT:
             case INTEGER:
-                return val -> new BigDecimalColumn((Integer) val);
+                return resultSet -> new BigDecimalColumn(resultSet.getInt(index));
             case INTERVAL_YEAR_MONTH:
-                return (IDeserializationConverter<Object, AbstractBaseColumn>)
-                        val -> {
-                            YearMonthIntervalType yearMonthIntervalType =
-                                    (YearMonthIntervalType) type;
-                            switch (yearMonthIntervalType.getResolution()) {
-                                case YEAR:
-                                    return new BigDecimalColumn(
-                                            Integer.parseInt(String.valueOf(val).substring(0, 4)));
-                                case MONTH:
-                                case YEAR_TO_MONTH:
-                                default:
-                                    throw new UnsupportedOperationException(
-                                            "jdbc converter only support YEAR");
-                            }
-                        };
+                return resultSet -> {
+                    YearMonthIntervalType yearMonthIntervalType = (YearMonthIntervalType) type;
+                    switch (yearMonthIntervalType.getResolution()) {
+                        case YEAR:
+                            return new BigDecimalColumn(resultSet.getInt(index));
+                        case MONTH:
+                        case YEAR_TO_MONTH:
+                        default:
+                            throw new UnsupportedOperationException(
+                                    "jdbc converter only support YEAR");
+                    }
+                };
             case FLOAT:
-                return val -> new BigDecimalColumn(new BigDecimal(val.toString()).floatValue());
+                return resultSet -> new BigDecimalColumn(resultSet.getFloat(index));
             case DOUBLE:
-                return val -> new BigDecimalColumn(new BigDecimal(val.toString()).doubleValue());
+                return resultSet -> new BigDecimalColumn(resultSet.getDouble(index));
             case BIGINT:
-                return val -> new BigDecimalColumn((new BigDecimal(val.toString()).longValue()));
+                return resultSet -> new BigDecimalColumn(resultSet.getLong(index));
             case DECIMAL:
-                return val -> new BigDecimalColumn(new BigDecimal(val.toString()));
+                return resultSet -> new BigDecimalColumn(resultSet.getBigDecimal(index));
             case CHAR:
             case VARCHAR:
-                return val -> new StringColumn(val.toString());
+                return resultSet -> new StringColumn(resultSet.getString(index));
             case DATE:
-                return val -> new SqlDateColumn((Date) val);
+                return resultSet -> new SqlDateColumn(resultSet.getDate(index));
             case TIME_WITHOUT_TIME_ZONE:
-                return val -> new TimeColumn((Time) val);
+                return resultSet -> new TimeColumn(resultSet.getTime(index));
             case TIMESTAMP_WITH_TIME_ZONE:
             case TIMESTAMP_WITHOUT_TIME_ZONE:
-                return (IDeserializationConverter<Object, AbstractBaseColumn>)
-                        val ->
-                                new TimestampColumn(
-                                        (Timestamp) val, ((TimestampType) (type)).getPrecision());
-
+                int precision = ((TimestampType) (type)).getPrecision();
+                return resultSet -> new TimestampColumn(resultSet.getTimestamp(index), precision);
             case BINARY:
             case VARBINARY:
-                return val -> new BytesColumn((byte[]) val);
+                return resultSet -> new BytesColumn(resultSet.getBytes(index));
             default:
                 throw new UnsupportedOperationException("Unsupported type:" + type);
         }
@@ -171,7 +159,8 @@ public class JdbcColumnConverter
 
     @Override
     protected ISerializationConverter<FieldNamedPreparedStatement> createExternalConverter(
-            LogicalType type) {
+            Integer i) {
+        LogicalType type = rowType.getTypeAt(i);
         switch (type.getTypeRoot()) {
             case BOOLEAN:
                 return (val, index, statement) ->

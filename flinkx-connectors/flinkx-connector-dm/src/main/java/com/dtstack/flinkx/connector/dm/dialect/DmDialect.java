@@ -178,7 +178,7 @@ public class DmDialect implements JdbcDialect {
     }
 
     @Override
-    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, LogicalType>
+    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, Integer>
             getColumnConverter(RowType rowType, FlinkxCommonConf commonConf) {
         return new DmColumnConverter(rowType, commonConf);
     }

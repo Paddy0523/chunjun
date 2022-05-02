@@ -57,7 +57,7 @@ public class InceptorHyperbaseDialect extends InceptorDialect {
     }
 
     @Override
-    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, LogicalType>
+    public AbstractRowConverter<ResultSet, JsonArray, FieldNamedPreparedStatement, Integer>
             getColumnConverter(RowType rowType, FlinkxCommonConf commonConf) {
         return new InceptorHyberbaseColumnConvert(rowType, commonConf);
     }
