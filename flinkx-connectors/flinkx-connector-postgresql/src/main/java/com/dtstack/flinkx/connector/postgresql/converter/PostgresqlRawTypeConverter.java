@@ -21,7 +21,10 @@ package com.dtstack.flinkx.connector.postgresql.converter;
 import com.dtstack.flinkx.throwable.UnsupportedTypeException;
 
 import org.apache.flink.table.api.DataTypes;
+import org.apache.flink.table.types.AtomicDataType;
 import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.logical.IntType;
+import org.apache.flink.table.types.logical.VarCharType;
 
 import java.util.Locale;
 
@@ -95,6 +98,10 @@ public class PostgresqlRawTypeConverter {
             case "BOOLEAN":
             case "BOOL":
                 return DataTypes.BOOLEAN();
+            case "_INT4":
+                return DataTypes.ARRAY(new AtomicDataType(new IntType()));
+            case "_TEXT":
+                return DataTypes.ARRAY(new AtomicDataType(new VarCharType()));
 
                 // 以下类型无法支持
                 // Enumerated Types

@@ -1,0 +1,183 @@
+{
+  "job": {
+    "content": [
+      {
+        "reader": {
+          "parameter": {
+            "path": "hdfs://ns1/dtInsight/hive/warehouse/xiaohe_0409.db/ods_order_orc",
+            "fileName": "ds=2021-04-12",
+            "partition": "ds=2021-04-12",
+            "hadoopConfig": {
+              "yarn.resourcemanager.zk-address": "172.16.100.175:2181,172.16.101.196:2181,172.16.101.227:2181",
+              "yarn.resourcemanager.admin.address.rm1": "172.16.101.196:8033",
+              "yarn.log.server.url": "http://172.16.100.175:19888/jobhistory/logs/",
+              "yarn.resourcemanager.admin.address.rm2": "172.16.101.227:8033",
+              "yarn.resourcemanager.ha.automatic-failover.zk-base-path": "/yarn-leader-election",
+              "yarn.client.failover-proxy-provider": "org.apache.hadoop.yarn.client.ConfiguredRMFailoverProxyProvider",
+              "javax.jdo.option.ConnectionDriverName": "com.mysql.jdbc.Driver",
+              "dfs.replication": "3",
+              "dfs.ha.fencing.ssh.private-key-files": "~/.ssh/id_rsa",
+              "dfs.nameservices": "ns1",
+              "fs.hdfs.impl.disable.cache": "true",
+              "dfs.safemode.threshold.pct": "0.5",
+              "dfs.ha.namenodes.ns1": "nn1,nn2",
+              "yarn.resourcemanager.address.rm1": "172.16.101.196:8032",
+              "dfs.journalnode.rpc-address": "0.0.0.0:8485",
+              "yarn.resourcemanager.ha.enabled": "true",
+              "yarn.resourcemanager.address.rm2": "172.16.101.227:8032",
+              "dfs.journalnode.http-address": "0.0.0.0:8480",
+              "dfs.namenode.rpc-address.ns1.nn2": "172.16.101.227:9000",
+              "hadoop.security.authorization": "true",
+              "dfs.namenode.rpc-address.ns1.nn1": "172.16.101.196:9000",
+              "yarn.resourcemanager.cluster-id": "yarn-rm-cluster",
+              "hive.metastore.warehouse.dir": "/dtInsight/hive/warehouse",
+              "yarn.nodemanager.aux-services": "mapreduce_shuffle",
+              "yarn.nodemanager.resource.cpu-vcores": "8",
+              "hive.metastore.schema.verification": "false",
+              "javax.jdo.option.ConnectionPassword": "DT@Stack#123",
+              "hive.metastore.uris": "thrift://172.16.100.214:9083",
+              "hive.exec.dynamic.partition.mode": "nonstrict",
+              "yarn.resourcemanager.ha.automatic-failover.enabled": "true",
+              "yarn.log-aggregation.retain-check-interval-seconds": "604800",
+              "yarn.nodemanager.webapp.address": "0.0.0.0:8042",
+              "dfs.namenode.datanode.registration.ip-hostname-check": "false",
+              "yarn.nodemanager.aux-services.mapreduce_shuffle.class": "org.apache.hadoop.mapred.ShuffleHandler",
+              "yarn.log-aggregation-enable": "true",
+              "hadoop.proxyuser.admin.hosts": "*",
+              "yarn.resourcemanager.store.class": "org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore",
+              "hive.cluster.delegation.token.store.class": "org.apache.hadoop.hive.thrift.MemoryTokenStore",
+              "ha.zookeeper.quorum": "172.16.100.175:2181,172.16.101.196:2181,172.16.101.227:2181",
+              "ipc.server.read.threadpool.size": "1",
+              "fs.defaultFS": "hdfs://ns1",
+              "yarn.resourcemanager.webapp.address.rm2": "172.16.101.227:8088",
+              "yarn.resourcemanager.webapp.address.rm1": "172.16.101.196:8088",
+              "yarn.resourcemanager.ha.rm-ids": "rm1,rm2",
+              "yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage": "95",
+              "hadoop.proxyuser.admin.groups": "*",
+              "typeName": "yarn2-hdfs2-hadoop2",
+              "dfs.ha.fencing.methods": "sshfence",
+              "dfs.client.failover.proxy.provider.ns1": "org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider",
+              "javax.jdo.option.ConnectionURL": "jdbc:mysql://172.16.101.227:3306/metastore?createDatabaseIfNotExist=true",
+              "yarn.resourcemanager.scheduler.address.rm1": "172.16.101.196:8030",
+              "dfs.namenode.handler.count": "64",
+              "yarn.resourcemanager.scheduler.address.rm2": "172.16.101.227:8030",
+              "yarn.nodemanager.delete.debug-delay-sec": "600",
+              "dfs.namenode.name.dir": "file:/data/hadoop/hdfs/name",
+              "yarn.log-aggregation.retain-seconds": "604800",
+              "fs.trash.interval": "14400",
+              "yarn.nodemanager.resource.memory-mb": "12288",
+              "yarn.nodemanager.disk-health-checker.min-healthy-disks": "0",
+              "yarn.scheduler.minimum-allocation-mb": "512",
+              "dfs.datanode.data.dir": "file:/data/hadoop/hdfs/data",
+              "dfs.namenode.shared.edits.dir": "qjournal://172.16.100.175:8485;172.16.101.196:8485;172.16.101.227:8485/namenode-ha-data",
+              "yarn.resourcemanager.resource-tracker.address.rm1": "172.16.101.196:8031",
+              "yarn.resourcemanager.resource-tracker.address.rm2": "172.16.101.227:8031",
+              "javax.jdo.option.ConnectionUserName": "drpeco",
+              "hadoopVersion": "Hadoop 2.x",
+              "security.job.submission.protocol.acl": "admin",
+              "yarn.nodemanager.pmem-check-enabled": "true",
+              "yarn.nodemanager.remote-app-log-dir": "/tmp/logs",
+              "yarn.scheduler.maximum-allocation-mb": "12288",
+              "yarn.nodemanager.vmem-check-enabled": "false",
+              "ha.zookeeper.session-timeout.ms": "5000",
+              "hadoop.tmp.dir": "/data/hadoop_admin",
+              "dfs.journalnode.edits.dir": "/data/hadoop/hdfs/journal",
+              "dfs.namenode.http-address.ns1.nn2": "172.16.101.227:50070",
+              "dfs.namenode.http-address.ns1.nn1": "172.16.101.196:50070",
+              "yarn.resourcemanager.recovery.enabled": "true",
+              "yarn.nodemanager.vmem-pmem-ratio": "4",
+              "hive.exec.scratchdir": "/dtInsight/hive/warehouse",
+              "yarn.resourcemanager.zk-state-store.address": "172.16.100.175:2181,172.16.101.196:2181,172.16.101.227:2181",
+              "yarn.nodemanager.disk-health-checker.enable": "true",
+              "datanucleus.schema.autoCreateAll": "true",
+              "hive.exec.dynamic.partition": "true",
+              "yarn.nodemanager.disk-health-checker.interval-ms": "120000",
+              "dfs.ha.automatic-failover.enabled": "true"
+            },
+            "column": [
+              {
+                "name": "order_header_id",
+                "index": 0,
+                "isPart": false,
+                "type": "string",
+                "key": "order_header_id"
+              },
+              {
+                "name": "order_date",
+                "index": 1,
+                "isPart": false,
+                "type": "bigint",
+                "key": "order_date"
+              }
+            ],
+            "defaultFS": "hdfs://ns1",
+            "connection": [
+              {
+                "jdbcUrl": "jdbc:hive2://172.16.100.214:8191/xiaohe_0409",
+                "table": [
+                  "ods_order_orc"
+                ]
+              }
+            ],
+            "encoding": "utf-8",
+            "fileType": "orc",
+            "sourceIds": [
+              13
+            ]
+          },
+          "name": "hdfsreader"
+        },
+        "writer": {
+          "parameter": {
+            "postSql": [],
+            "password": "abc123",
+            "session": [],
+            "column": [
+              {
+                "name": "id",
+                "type": "int4",
+                "key": "id"
+              },
+              {
+                "name": "entry_date",
+                "type": "date",
+                "key": "entry_date"
+              }
+            ],
+            "connection": [
+              {
+                "schema": "public",
+                "jdbcUrl": "jdbc:postgresql://172.16.101.246:5432/postgres",
+                "table": [
+                  "audit"
+                ]
+              }
+            ],
+            "writeMode": "insert",
+            "sourceIds": [
+              17
+            ],
+            "username": "postgres",
+            "preSql": []
+          },
+          "name": "postgresqlwriter"
+        }
+      }
+    ],
+    "setting": {
+      "restore": {
+        "maxRowNumForCheckpoint": 0,
+        "isRestore": false,
+        "restoreColumnName": "",
+        "restoreColumnIndex": 0
+      },
+      "errorLimit": {
+        "record": 100
+      },
+      "speed": {
+        "bytes": 0,
+        "channel": 1
+      }
+    }
+  }
+}
