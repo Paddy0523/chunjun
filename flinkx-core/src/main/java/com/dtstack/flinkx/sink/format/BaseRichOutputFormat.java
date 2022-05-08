@@ -56,6 +56,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -273,6 +274,9 @@ public abstract class BaseRichOutputFormat extends RichOutputFormat<RowData>
             return;
         }
 
+        if (Objects.isNull(rows)) {
+            return;
+        }
         Exception closeException = null;
 
         if (null != timerWriteException) {

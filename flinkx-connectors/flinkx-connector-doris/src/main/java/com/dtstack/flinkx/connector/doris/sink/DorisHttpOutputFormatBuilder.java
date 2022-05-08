@@ -19,6 +19,7 @@
 package com.dtstack.flinkx.connector.doris.sink;
 
 import com.dtstack.flinkx.connector.doris.options.DorisConf;
+import com.dtstack.flinkx.connector.jdbc.conf.JdbcConf;
 import com.dtstack.flinkx.sink.format.BaseRichOutputFormatBuilder;
 
 import java.util.List;
@@ -38,8 +39,9 @@ public class DorisHttpOutputFormatBuilder extends BaseRichOutputFormatBuilder {
     }
 
     public void setDorisOptions(DorisConf options) {
+        JdbcConf jdbcConf = options.setToJdbcConf();
         format.setOptions(options);
-        format.setConfig(options);
+        format.setConfig(jdbcConf);
     }
 
     public void setColumns(List<String> columns) {

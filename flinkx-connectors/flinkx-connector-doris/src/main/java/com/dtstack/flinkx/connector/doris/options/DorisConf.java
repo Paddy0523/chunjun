@@ -27,6 +27,7 @@ import com.dtstack.flinkx.util.StringUtil;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -83,7 +84,7 @@ public class DorisConf extends JdbcConf {
     }
 
     public String getPassword() {
-        return password;
+        return Objects.isNull(password) ? "" : password;
     }
 
     public void setPassword(String password) {

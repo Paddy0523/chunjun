@@ -18,12 +18,18 @@
 
 package com.dtstack.flinkx.connector.doris.table;
 
+import com.dtstack.flinkx.connector.doris.DorisUtil;
 import com.dtstack.flinkx.connector.doris.options.DorisConf;
 import com.dtstack.flinkx.connector.doris.options.DorisOptions;
 import com.dtstack.flinkx.connector.doris.options.LoadConf;
 import com.dtstack.flinkx.connector.doris.options.LoadConfBuilder;
 import com.dtstack.flinkx.connector.doris.sink.DorisDynamicTableSink;
+import com.dtstack.flinkx.connector.doris.source.DorisInputFormat;
+import com.dtstack.flinkx.connector.doris.source.DorisInputFormatBuilder;
+import com.dtstack.flinkx.connector.jdbc.conf.JdbcConf;
 import com.dtstack.flinkx.connector.jdbc.dialect.JdbcDialect;
+import com.dtstack.flinkx.connector.jdbc.source.JdbcDynamicTableSource;
+import com.dtstack.flinkx.connector.jdbc.source.JdbcInputFormatBuilder;
 import com.dtstack.flinkx.connector.jdbc.table.JdbcDynamicTableFactory;
 import com.dtstack.flinkx.connector.mysql.dialect.MysqlDialect;
 
@@ -31,6 +37,7 @@ import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
+import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.utils.TableSchemaUtils;
@@ -39,10 +46,15 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static com.dtstack.flinkx.connector.jdbc.options.JdbcLookupOptions.DRUID_PREFIX;
+import static com.dtstack.flinkx.connector.jdbc.options.JdbcLookupOptions.VERTX_PREFIX;
+import static com.dtstack.flinkx.connector.jdbc.options.JdbcLookupOptions.getLibConfMap;
 
 /**
  * declare doris table factory info.
@@ -81,6 +93,68 @@ public class DorisDynamicTableFactory extends JdbcDynamicTableFactory
 
         DorisConf ftpConfig = getConfByOptions(config);
         return new DorisDynamicTableSink(physicalSchema, ftpConfig);
+    }
+
+    @Override
+    public DynamicTableSource createDynamicTableSource(Context context) {
+
+        DorisInputFormat dorisInputFormat = new DorisInputFormat();
+
+        final FactoryUtil.TableFactoryHelper helper =
+                FactoryUtil.createTableFactoryHelper(this, context);
+        // 1.所有的requiredOptions和optionalOptions参数
+        final ReadableConfig config = helper.getOptions();
+
+        DorisConf dorisConf = new DorisConf();
+        dorisConf.setUrl(config.get(DorisOptions.URL));
+        dorisConf.setFeNodes(config.get(DorisOptions.FENODES));
+
+        dorisInputFormat.setDorisConf(dorisConf);
+
+        // 2.参数校验
+        helper.validateExcept(VERTX_PREFIX, DRUID_PREFIX);
+        validateConfigOptions(config);
+        // 3.封装参数
+        TableSchema physicalSchema =
+                TableSchemaUtils.getPhysicalSchema(context.getCatalogTable().getSchema());
+        JdbcDialect jdbcDialect = getDialect();
+
+        final Map<String, Object> druidConf =
+                getLibConfMap(context.getCatalogTable().getOptions(), DRUID_PREFIX);
+
+        return new JdbcDynamicTableSource(
+                getSourceConnectionConf(helper.getOptions()),
+                getJdbcLookupConf(
+                        helper.getOptions(),
+                        context.getObjectIdentifier().getObjectName(),
+                        druidConf),
+                physicalSchema,
+                jdbcDialect,
+                new DorisInputFormatBuilder(dorisInputFormat));
+    }
+
+    @Override
+    protected JdbcConf getSourceConnectionConf(ReadableConfig readableConfig) {
+        JdbcConf jdbcConf = super.getSourceConnectionConf(readableConfig);
+        String url = readableConfig.get(DorisOptions.URL);
+        List<String> feNodes = readableConfig.get(DorisOptions.FENODES);
+
+        String jdbcUrl = DorisUtil.getJdbcUrlFromFe(feNodes, url);
+
+        jdbcConf.setJdbcUrl(jdbcUrl);
+
+        return jdbcConf;
+    }
+
+    @Override
+    protected void validateConfigOptions(ReadableConfig config) {
+        String url = config.get(DorisOptions.URL);
+        List<String> feNodes = config.get(DorisOptions.FENODES);
+
+        if (StringUtils.isEmpty(url) && (null == feNodes || feNodes.isEmpty())) {
+            throw new IllegalArgumentException(
+                    "Choose one of 'url' and 'feNodes', them can not be empty at same time.");
+        }
     }
 
     private static DorisConf getConfByOptions(ReadableConfig config) {
@@ -156,6 +230,8 @@ public class DorisDynamicTableFactory extends JdbcDynamicTableFactory
                 Stream.of(
                                 DorisOptions.USERNAME,
                                 DorisOptions.PASSWORD,
+                                DorisOptions.FENODES,
+                                DorisOptions.TABLE_IDENTIFY,
                                 DorisOptions.REQUEST_TABLET_SIZE,
                                 DorisOptions.REQUEST_CONNECT_TIMEOUT_MS,
                                 DorisOptions.REQUEST_READ_TIMEOUT_MS,
@@ -175,5 +251,10 @@ public class DorisDynamicTableFactory extends JdbcDynamicTableFactory
         options.addAll(optionalOptions);
         options.addAll(requiredOptions);
         return options;
+    }
+
+    @Override
+    protected JdbcInputFormatBuilder getInputFormatBuilder() {
+        return new DorisInputFormatBuilder(new DorisInputFormat());
     }
 }
