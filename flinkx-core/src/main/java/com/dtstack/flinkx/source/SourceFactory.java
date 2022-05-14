@@ -38,7 +38,6 @@ import org.apache.flink.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -60,13 +59,11 @@ public abstract class SourceFactory implements RawTypeConvertible {
         this.env = env;
         this.syncConf = syncConf;
 
-        if (syncConf.getTransformer() == null
-                || StringUtils.isBlank(syncConf.getTransformer().getTransformSql())) {
-            fieldList = Collections.emptyList();
-        } else {
-            fieldList = syncConf.getReader().getFieldList();
+        if (syncConf.getTransformer() != null
+                && !StringUtils.isBlank(syncConf.getTransformer().getTransformSql())) {
             useAbstractBaseColumn = false;
         }
+        fieldList = syncConf.getReader().getFieldList();
     }
 
     /**
@@ -134,7 +131,9 @@ public abstract class SourceFactory implements RawTypeConvertible {
 
     protected TypeInformation<RowData> getTypeInformation() {
         if (typeInformation == null) {
-            typeInformation = TableUtil.getTypeInformation(fieldList, getRawTypeConverter());
+            typeInformation =
+                    TableUtil.getTypeInformation(
+                            fieldList, getRawTypeConverter(), useAbstractBaseColumn);
         }
         return typeInformation;
     }

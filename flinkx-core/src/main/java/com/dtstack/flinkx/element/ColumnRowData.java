@@ -74,6 +74,10 @@ public final class ColumnRowData implements RowData, Serializable {
         this.header.put(name, this.header.size());
     }
 
+    public void setHeader(Map<String, Integer> header) {
+        this.header = header;
+    }
+
     public void replaceHeader(String original, String another) {
         if (this.header == null || !this.header.containsKey(original)) {
             addHeader(another);

@@ -54,6 +54,12 @@ public class StringColumn extends AbstractBaseColumn {
         }
     }
 
+    public StringColumn(final String data, String format, boolean isCustomFormat) {
+        super(data);
+        this.format = format;
+        this.isCustomFormat = isCustomFormat;
+    }
+
     public StringColumn(Byte aByte) {
         super(aByte);
     }
@@ -250,5 +256,13 @@ public class StringColumn extends AbstractBaseColumn {
 
     public boolean isCustomFormat() {
         return isCustomFormat;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public void setFormat(String format) {
+        this.format = format;
     }
 }

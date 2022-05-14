@@ -34,7 +34,7 @@ public class TimestampColumn extends AbstractBaseColumn {
 
     private static final int DATETIME_STR_LENGTH = 19;
 
-    private int precision;
+    private final int precision;
 
     public TimestampColumn(Timestamp data) {
         super(data);
