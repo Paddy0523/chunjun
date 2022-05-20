@@ -82,7 +82,6 @@ public class OracleRawTypeConverter {
                 return DataTypes.DECIMAL(decimalInfo.getPrecision(), decimalInfo.getScale());
             case "DATE":
                 return DataTypes.DATE();
-            case "RAW":
             case "TIMESTAMP":
                 return DataTypes.TIMESTAMP();
             case "LONG RAW":
