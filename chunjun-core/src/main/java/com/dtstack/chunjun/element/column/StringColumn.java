@@ -32,6 +32,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import static com.dtstack.chunjun.element.ClassSizeUtil.getStringSize;
+
 /**
  * Date: 2021/04/26 Company: www.dtstack.com
  *
@@ -43,19 +45,26 @@ public class StringColumn extends AbstractBaseColumn {
     private boolean isCustomFormat = false;
 
     public StringColumn(final String data) {
-        super(data);
+        super(data, 0);
+        // default format length = 19
+        // isCustomFormatSize = 1
+        byteSize += getStringSize(data) + 19 + 1;
     }
 
     public StringColumn(final String data, String format) {
-        super(data);
+        super(data, 0);
         if (StringUtils.isNotBlank(format)) {
             this.format = format;
             isCustomFormat = true;
+            byteSize += getStringSize(data) + getStringSize(format) + 1;
+        } else {
+            byteSize += getStringSize(data) + 19 + 1;
         }
     }
 
     public StringColumn(Byte aByte) {
-        super(aByte);
+        super(aByte, 0);
+        byteSize += 1 + 19 + 1;
     }
 
     @Override
@@ -208,7 +217,7 @@ public class StringColumn extends AbstractBaseColumn {
         if (null == data) {
             return null;
         }
-        throw new CastException("String", "java.sql.Time", String.valueOf(data));
+        return new Time(asTimestamp().getTime());
     }
 
     @Override

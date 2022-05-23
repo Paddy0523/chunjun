@@ -58,7 +58,7 @@ public class HBase14SinkFactory extends SinkFactory {
         builder.setWriteBufferSize(hbaseConf.getWriteBufferSize());
         AbstractRowConverter rowConverter =
                 new HBaseColumnConverter(hbaseConf.getColumnMetaInfos());
-        builder.setRowConverter(rowConverter);
+        builder.setRowConverter(rowConverter, useAbstractBaseColumn);
         return createOutput(dataSet, builder.finish());
     }
 

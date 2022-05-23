@@ -66,7 +66,7 @@ public class HBase14SourceFactory extends SourceFactory {
         builder.setScanCacheSize(config.getScanCacheSize());
         builder.setStartRowKey(config.getStartRowkey());
         AbstractRowConverter rowConverter = new HBaseColumnConverter(config.getColumnMetaInfos());
-        builder.setRowConverter(rowConverter);
+        builder.setRowConverter(rowConverter, useAbstractBaseColumn);
         return createInput(builder.finish());
     }
 }
