@@ -105,7 +105,7 @@ public class HdfsTextInputFormat extends BaseHdfsInputFormat {
     private void initHdfsTextReader(InputSplit inputSplit) throws IOException {
         HdfsTextInputSplit hdfsTextInputSplit = (HdfsTextInputSplit) inputSplit;
         org.apache.hadoop.mapred.InputSplit fileSplit = hdfsTextInputSplit.getTextSplit();
-        findCurrentPartition(((FileSplit) fileSplit).getPath());
+        initPartitionColumnValue(((FileSplit) fileSplit).getPath().toUri().getPath());
         super.recordReader =
                 super.inputFormat.getRecordReader(fileSplit, super.hadoopJobConf, Reporter.NULL);
         super.key = new LongWritable();
@@ -135,11 +135,14 @@ public class HdfsTextInputFormat extends BaseHdfsInputFormat {
                 }
             } else {
                 genericRowData = new GenericRowData(fieldConfList.size());
+                int partitionIndex = 0;
                 for (int i = 0; i < fieldConfList.size(); i++) {
                     FieldConf fieldConf = fieldConfList.get(i);
                     Object value = null;
                     if (fieldConf.getValue() != null) {
                         value = fieldConf.getValue();
+                    } else if (fieldConf.getPart()) {
+                        value = partitionColumnValueList.get(partitionIndex);
                     } else if (fieldConf.getIndex() != null
                             && fieldConf.getIndex() < fields.length) {
                         String strVal = fields[fieldConf.getIndex()];

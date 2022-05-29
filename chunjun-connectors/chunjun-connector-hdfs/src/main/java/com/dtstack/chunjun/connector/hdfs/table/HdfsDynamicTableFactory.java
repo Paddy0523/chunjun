@@ -36,6 +36,7 @@ import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.utils.TableSchemaUtils;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -93,12 +94,13 @@ public class HdfsDynamicTableFactory implements DynamicTableSourceFactory, Dynam
         // 3.封装参数
         TableSchema physicalSchema =
                 TableSchemaUtils.getPhysicalSchema(context.getCatalogTable().getSchema());
+        List<String> partitionKeys = context.getCatalogTable().getPartitionKeys();
         HdfsConf hdfsConf = getHdfsConf(config);
         hdfsConf.setParallelism(config.get(SourceOptions.SCAN_PARALLELISM));
         hdfsConf.setHadoopConfig(
                 HdfsOptions.getHadoopConfig(context.getCatalogTable().getOptions()));
 
-        return new HdfsDynamicTableSource(hdfsConf, physicalSchema);
+        return new HdfsDynamicTableSource(hdfsConf, physicalSchema, partitionKeys);
     }
 
     @Override

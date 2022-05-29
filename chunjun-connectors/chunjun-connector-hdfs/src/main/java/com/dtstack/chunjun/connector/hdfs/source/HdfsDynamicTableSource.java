@@ -48,10 +48,17 @@ public class HdfsDynamicTableSource implements ScanTableSource {
 
     private final HdfsConf hdfsConf;
     private final TableSchema tableSchema;
+    private final List<String> partitionKeyList;
 
     public HdfsDynamicTableSource(HdfsConf hdfsConf, TableSchema tableSchema) {
+        this(hdfsConf, tableSchema, new ArrayList<>());
+    }
+
+    public HdfsDynamicTableSource(
+            HdfsConf hdfsConf, TableSchema tableSchema, List<String> partitionKeyList) {
         this.hdfsConf = hdfsConf;
         this.tableSchema = tableSchema;
+        this.partitionKeyList = partitionKeyList;
     }
 
     @Override
@@ -59,15 +66,22 @@ public class HdfsDynamicTableSource implements ScanTableSource {
         final RowType rowType = (RowType) tableSchema.toRowDataType().getLogicalType();
         TypeInformation<RowData> typeInformation = InternalTypeInfo.of(rowType);
         String[] fieldNames = tableSchema.getFieldNames();
-        List<FieldConf> columnList = new ArrayList<>(fieldNames.length);
+        List<FieldConf> columnList = new ArrayList<>(fieldNames.length - partitionKeyList.size());
+        List<FieldConf> partitionColumnList = new ArrayList<>(partitionKeyList.size());
         for (int i = 0; i < fieldNames.length; i++) {
+            String fieldName = fieldNames[i];
             FieldConf field = new FieldConf();
-            field.setName(fieldNames[i]);
+            field.setName(fieldName);
             field.setType(rowType.getTypeAt(i).asSummaryString());
             field.setIndex(i);
+            if (partitionKeyList.contains(fieldName)) {
+                field.setPart(true);
+                partitionColumnList.add(field);
+            }
             columnList.add(field);
         }
         hdfsConf.setColumn(columnList);
+        hdfsConf.setPartitionColumnList(partitionColumnList);
         HdfsInputFormatBuilder builder = HdfsInputFormatBuilder.newBuild(hdfsConf.getFileType());
         builder.setHdfsConf(hdfsConf);
         AbstractRowConverter rowConverter;

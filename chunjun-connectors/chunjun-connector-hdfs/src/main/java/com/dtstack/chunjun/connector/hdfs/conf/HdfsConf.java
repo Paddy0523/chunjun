@@ -18,6 +18,7 @@
 package com.dtstack.chunjun.connector.hdfs.conf;
 
 import com.dtstack.chunjun.conf.BaseFileConf;
+import com.dtstack.chunjun.conf.FieldConf;
 
 import parquet.hadoop.ParquetWriter;
 
@@ -43,6 +44,9 @@ public class HdfsConf extends BaseFileConf {
     private boolean enableDictionary = true;
     private List<String> fullColumnName;
     private List<String> fullColumnType;
+
+    /** table partition column */
+    private List<FieldConf> partitionColumnList;
 
     public String getDefaultFS() {
         return defaultFS;
@@ -116,6 +120,14 @@ public class HdfsConf extends BaseFileConf {
         this.fullColumnType = fullColumnType;
     }
 
+    public List<FieldConf> getPartitionColumnList() {
+        return partitionColumnList;
+    }
+
+    public void setPartitionColumnList(List<FieldConf> partitionColumnList) {
+        this.partitionColumnList = partitionColumnList;
+    }
+
     @Override
     public String toString() {
         return "HdfsConf{"
@@ -141,6 +153,9 @@ public class HdfsConf extends BaseFileConf {
                 + fullColumnName
                 + ", fullColumnType="
                 + fullColumnType
-                + '}';
+                + ", partitionColumnList="
+                + partitionColumnList
+                + '}'
+                + super.toString();
     }
 }

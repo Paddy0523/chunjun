@@ -39,6 +39,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalQueries;
@@ -130,10 +131,19 @@ public class HdfsTextRowConverter
             case DATE:
                 return (IDeserializationConverter<String, Integer>)
                         val -> {
-                            LocalDate date =
-                                    DateTimeFormatter.ISO_LOCAL_DATE
-                                            .parse(val)
-                                            .query(TemporalQueries.localDate());
+                            LocalDate date;
+                            try {
+                                date =
+                                        DateTimeFormatter.ISO_LOCAL_DATE
+                                                .parse(val)
+                                                .query(TemporalQueries.localDate());
+                            } catch (Exception e) {
+                                SimpleDateFormat simpleDateFormat =
+                                        new SimpleDateFormat("yyyyMMdd");
+                                date =
+                                        new Date(simpleDateFormat.parse(val).getTime())
+                                                .toLocalDate();
+                            }
                             return (int) date.toEpochDay();
                         };
             case FLOAT:

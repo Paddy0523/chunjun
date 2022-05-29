@@ -19,11 +19,17 @@ package com.dtstack.chunjun.connector.hdfs.source;
 
 import com.dtstack.chunjun.conf.FieldConf;
 import com.dtstack.chunjun.connector.hdfs.conf.HdfsConf;
+import com.dtstack.chunjun.connector.hdfs.converter.HdfsRawTypeConverter;
+import com.dtstack.chunjun.connector.hdfs.converter.HdfsTextColumnConverter;
+import com.dtstack.chunjun.connector.hdfs.converter.HdfsTextRowConverter;
 import com.dtstack.chunjun.constants.ConstantValue;
+import com.dtstack.chunjun.converter.AbstractRowConverter;
+import com.dtstack.chunjun.converter.IDeserializationConverter;
 import com.dtstack.chunjun.source.format.BaseRichInputFormat;
 import com.dtstack.chunjun.throwable.ChunJunRuntimeException;
 import com.dtstack.chunjun.util.FileSystemUtil;
 import com.dtstack.chunjun.util.PluginUtil;
+import com.dtstack.chunjun.util.TableUtil;
 
 import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.core.io.InputSplit;
@@ -36,8 +42,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -61,6 +70,10 @@ public abstract class BaseHdfsInputFormat extends BaseRichInputFormat {
     protected transient org.apache.hadoop.mapred.InputFormat inputFormat;
     protected transient JobConf hadoopJobConf;
     protected transient RecordReader recordReader;
+
+    protected List<FieldConf> partitionColumnList;
+    protected AbstractRowConverter partitionConverter;
+    protected List<Object> partitionColumnValueList;
 
     @Override
     public InputSplit[] createInputSplitsInternal(int minNumSplits) throws IOException {
@@ -100,6 +113,57 @@ public abstract class BaseHdfsInputFormat extends BaseRichInputFormat {
                             hdfsConf.getDefaultFS(),
                             getRuntimeContext().getDistributedCache());
         }
+        this.partitionColumnList = hdfsConf.getPartitionColumnList();
+        this.partitionColumnValueList = new ArrayList<>(partitionColumnList.size());
+        if (useAbstractColumn) {
+            this.partitionConverter = new HdfsTextColumnConverter(partitionColumnList);
+        } else {
+            this.partitionConverter =
+                    new HdfsTextRowConverter(
+                            TableUtil.createRowType(
+                                    partitionColumnList, HdfsRawTypeConverter::apply));
+        }
+    }
+
+    protected void initPartitionColumnValue(String currentFilePath) {
+        partitionColumnValueList.clear();
+        ArrayList<IDeserializationConverter> toInternalConverterList;
+        try {
+            Field toInternalConvertersField =
+                    AbstractRowConverter.class.getDeclaredField("toInternalConverters");
+            toInternalConvertersField.setAccessible(true);
+            toInternalConverterList =
+                    (ArrayList<IDeserializationConverter>)
+                            toInternalConvertersField.get(partitionConverter);
+        } catch (Exception e) {
+            throw new ChunJunRuntimeException("failed to get partition toInternalConverters");
+        }
+        for (int i = 0; i < partitionColumnList.size(); i++) {
+            FieldConf partitionFieldConf = partitionColumnList.get(i);
+            String partitionName = partitionFieldConf.getName();
+            int partitionIndex = currentFilePath.lastIndexOf(partitionName);
+            int equalSymbolIndex =
+                    currentFilePath.indexOf(ConstantValue.EQUAL_SYMBOL, partitionIndex);
+            if (equalSymbolIndex == -1) {
+                throw new ChunJunRuntimeException(
+                        String.format(
+                                "failed to get hdfs partition value,currentFilePath=%s,partitionName=%s",
+                                currentFilePath, partitionName));
+            }
+            int slashIndex = currentFilePath.indexOf(File.separator, partitionIndex);
+            slashIndex = slashIndex == -1 ? currentFilePath.length() : slashIndex;
+            String partitionValueStr = currentFilePath.substring(equalSymbolIndex + 1, slashIndex);
+            try {
+                this.partitionColumnValueList.add(
+                        toInternalConverterList.get(i).deserialize(partitionValueStr));
+            } catch (Exception e) {
+                throw new ChunJunRuntimeException(
+                        String.format(
+                                "failed to get deserialize path=%s,partitionValueStr=%s,partitionFieldConf=%s",
+                                currentFilePath, partitionValueStr, partitionFieldConf),
+                        e);
+            }
+        }
     }
 
     @Override
@@ -121,30 +185,6 @@ public abstract class BaseHdfsInputFormat extends BaseRichInputFormat {
                 FileSystemUtil.getJobConf(hdfsConf.getHadoopConfig(), hdfsConf.getDefaultFS());
         hadoopJobConf.set(HdfsPathFilter.KEY_REGEX, hdfsConf.getFilterRegex());
         FileSystemUtil.setHadoopUserName(hadoopJobConf);
-    }
-
-    /**
-     * Get current partition information from hdfs path
-     *
-     * @param path hdfs path
-     */
-    public void findCurrentPartition(Path path) {
-        Map<String, String> map = new HashMap<>(16);
-        String pathStr = path.getParent().toString();
-        int index;
-        while ((index = pathStr.lastIndexOf(ConstantValue.EQUAL_SYMBOL)) > 0) {
-            int i = pathStr.lastIndexOf(File.separator);
-            String name = pathStr.substring(i + 1, index);
-            String value = pathStr.substring(index + 1);
-            map.put(name, value);
-            pathStr = pathStr.substring(0, i);
-        }
-
-        for (FieldConf fieldConf : hdfsConf.getColumn()) {
-            if (fieldConf.getPart()) {
-                fieldConf.setValue(map.get(fieldConf.getName()));
-            }
-        }
     }
 
     /**

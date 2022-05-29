@@ -109,7 +109,7 @@ public abstract class BaseRichInputFormat extends RichInputFormat<RowData, Input
     /** BaseRichInputFormat是否已经初始化 */
     private boolean initialized = false;
 
-    private boolean useAbstractColumn;
+    protected boolean useAbstractColumn;
 
     @Override
     public final void configure(Configuration parameters) {

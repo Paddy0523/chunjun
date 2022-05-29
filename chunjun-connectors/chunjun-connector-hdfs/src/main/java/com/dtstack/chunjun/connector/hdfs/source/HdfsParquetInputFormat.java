@@ -224,8 +224,9 @@ public class HdfsParquetInputFormat extends BaseHdfsInputFormat {
      * @throws IOException
      */
     private void nextFile() throws IOException {
-        Path path = new Path(currentSplitFilePaths.get(currentFileIndex));
-        findCurrentPartition(path);
+        String pathString = currentSplitFilePaths.get(currentFileIndex);
+        Path path = new Path(pathString);
+        initPartitionColumnValue(pathString);
         ParquetReader.Builder<Group> reader =
                 ParquetReader.builder(new GroupReadSupport(), path).withConf(hadoopJobConf);
         currentFileReader = reader.build();
@@ -246,11 +247,14 @@ public class HdfsParquetInputFormat extends BaseHdfsInputFormat {
             }
         } else {
             genericRowData = new GenericRowData(fieldConfList.size());
+            int partitionIndex = 0;
             for (int i = 0; i < fieldConfList.size(); i++) {
                 FieldConf fieldConf = fieldConfList.get(i);
                 Object obj = null;
                 if (fieldConf.getValue() != null) {
                     obj = fieldConf.getValue();
+                } else if (fieldConf.getPart()) {
+                    obj = partitionColumnValueList.get(partitionIndex++);
                 } else if (fieldConf.getIndex() != null
                         && fieldConf.getIndex() < fullColNames.size()) {
                     if (currentLine.getFieldRepetitionCount(fieldConf.getIndex()) > 0) {

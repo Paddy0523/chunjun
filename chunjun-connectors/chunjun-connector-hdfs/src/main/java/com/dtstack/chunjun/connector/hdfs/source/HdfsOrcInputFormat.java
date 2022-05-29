@@ -103,6 +103,7 @@ public class HdfsOrcInputFormat extends BaseHdfsInputFormat {
     public void openInternal(InputSplit inputSplit) throws IOException {
         HdfsOrcInputSplit hdfsOrcInputSplit = (HdfsOrcInputSplit) inputSplit;
         OrcSplit orcSplit = hdfsOrcInputSplit.getOrcSplit();
+        initPartitionColumnValue(orcSplit.getPath().toUri().getPath());
 
         if (openKerberos) {
             ugi.doAs(
@@ -138,7 +139,6 @@ public class HdfsOrcInputFormat extends BaseHdfsInputFormat {
     private void openOrcReader(InputSplit inputSplit) throws IOException {
         HdfsOrcInputSplit hdfsOrcInputSplit = (HdfsOrcInputSplit) inputSplit;
         OrcSplit orcSplit = hdfsOrcInputSplit.getOrcSplit();
-        findCurrentPartition(orcSplit.getPath());
         recordReader = inputFormat.getRecordReader(orcSplit, hadoopJobConf, Reporter.NULL);
         key = recordReader.createKey();
         value = recordReader.createValue();
@@ -246,14 +246,20 @@ public class HdfsOrcInputFormat extends BaseHdfsInputFormat {
             }
         } else {
             genericRowData = new GenericRowData(fieldConfList.size());
+            int partitionIndex = 0;
             for (int i = 0; i < fieldConfList.size(); i++) {
                 FieldConf fieldConf = fieldConfList.get(i);
                 Object obj = null;
                 if (fieldConf.getValue() != null) {
                     obj = fieldConf.getValue();
+                } else if (fieldConf.getPart()) {
+                    obj = partitionColumnValueList.get(partitionIndex++);
                 } else if (fieldConf.getIndex() != null
                         && fieldConf.getIndex() < fullColNames.length) {
-                    obj = inspector.getStructFieldData(value, fields.get(fieldConf.getIndex()));
+                    obj =
+                            HdfsUtil.getWritableValue(
+                                    inspector.getStructFieldData(
+                                            value, fields.get(fieldConf.getIndex())));
                 }
 
                 genericRowData.setField(i, HdfsUtil.getWritableValue(obj));
