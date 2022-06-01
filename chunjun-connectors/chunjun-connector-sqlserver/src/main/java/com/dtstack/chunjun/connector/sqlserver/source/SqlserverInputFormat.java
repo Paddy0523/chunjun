@@ -92,7 +92,7 @@ public class SqlserverInputFormat extends JdbcInputFormat {
         if (hasNext) {
             return false;
         } else {
-            if (jdbcConf.isPolling()) {
+            if (currentJdbcInputSplit.isPolling()) {
                 try {
                     TimeUnit.MILLISECONDS.sleep(jdbcConf.getPollingInterval());
                     // 间隔轮询检测数据库连接是否断开，超时时间三秒，断开后自动重连

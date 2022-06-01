@@ -25,7 +25,7 @@ import com.dtstack.chunjun.connector.jdbc.util.SqlUtil;
 import com.dtstack.chunjun.constants.ConstantValue;
 import com.dtstack.chunjun.constants.Metrics;
 import com.dtstack.chunjun.enums.ColumnType;
-import com.dtstack.chunjun.metrics.BigIntegerAccmulator;
+import com.dtstack.chunjun.metrics.BigIntegerAccumulator;
 import com.dtstack.chunjun.metrics.StringAccumulator;
 import com.dtstack.chunjun.restore.FormatState;
 import com.dtstack.chunjun.source.format.BaseRichInputFormat;
@@ -55,6 +55,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -85,25 +86,27 @@ public class JdbcInputFormat extends BaseRichInputFormat {
     protected boolean hasNext;
 
     protected int columnCount;
-    protected boolean isUpdateLocation;
+    protected boolean needUpdateEndLocation;
     protected Object state = null;
 
     protected StringAccumulator maxValueAccumulator;
-    protected BigIntegerAccmulator endLocationAccumulator;
-    protected BigIntegerAccmulator startLocationAccumulator;
+    protected BigIntegerAccumulator endLocationAccumulator;
+    protected BigIntegerAccumulator startLocationAccumulator;
 
     // 轮询增量标识字段类型
     protected ColumnType type;
 
+    protected JdbcInputSplit currentJdbcInputSplit;
+
     @Override
     public void openInternal(InputSplit inputSplit) {
-        JdbcInputSplit jdbcInputSplit = (JdbcInputSplit) inputSplit;
-        initMetric(jdbcInputSplit);
-        if (!canReadData(jdbcInputSplit)) {
+        this.currentJdbcInputSplit = (JdbcInputSplit) inputSplit;
+        initMetric(currentJdbcInputSplit);
+        if (!canReadData(currentJdbcInputSplit)) {
             LOG.warn(
                     "Not read data when the start location are equal to end location, start = {}, end = {}",
-                    jdbcInputSplit.getStartLocation(),
-                    jdbcInputSplit.getEndLocation());
+                    currentJdbcInputSplit.getStartLocation(),
+                    currentJdbcInputSplit.getEndLocation());
             hasNext = false;
             return;
         }
@@ -127,14 +130,14 @@ public class JdbcInputFormat extends BaseRichInputFormat {
             columnNameList = columnPair.getLeft();
             columnTypeList = columnPair.getRight();
 
-            querySQL = buildQuerySql(jdbcInputSplit);
+            querySQL = buildQuerySql(currentJdbcInputSplit);
             jdbcConf.setQuerySql(querySQL);
-            executeQuery(jdbcInputSplit.getStartLocation());
+            executeQuery(currentJdbcInputSplit.getStartLocation());
             if (!resultSet.isClosed()) {
                 columnCount = resultSet.getMetaData().getColumnCount();
             }
-            // 增量任务
-            isUpdateLocation =
+            // Determine whether the endLocation needs to be updated
+            needUpdateEndLocation =
                     jdbcConf.isIncrement() && !jdbcConf.isPolling() && !jdbcConf.isUseMaxFunc();
             RowType rowType =
                     TableUtil.createRowType(
@@ -158,38 +161,66 @@ public class JdbcInputFormat extends BaseRichInputFormat {
                             "numTaskVertices is [%s], but parallelism in jdbcConf is [%s]",
                             minNumSplits, jdbcConf.getParallelism()));
         }
-        JdbcInputSplit[] splits;
 
         if (jdbcConf.getParallelism() > 1
                 && StringUtils.equalsIgnoreCase("range", jdbcConf.getSplitStrategy())) {
-            splits = createSplitsInternalBySplitRange(minNumSplits);
+            return createSplitsInternalBySplitRange(minNumSplits);
         } else {
-            splits = new JdbcInputSplit[minNumSplits];
-            if (StringUtils.isNotBlank(jdbcConf.getStartLocation())) {
-                String[] startLocations =
-                        jdbcConf.getStartLocation().split(ConstantValue.COMMA_SYMBOL);
-                if (startLocations.length == 1) {
-                    for (int i = 0; i < minNumSplits; i++) {
-                        splits[i] =
-                                new JdbcInputSplit(
-                                        i, minNumSplits, i, startLocations[0], null, null, null);
-                    }
-                } else if (startLocations.length != jdbcConf.getParallelism()) {
-                    throw new ChunJunRuntimeException(
-                            String.format(
-                                    "startLocations is %s, but parallelism in jdbcConf is [%s]",
-                                    Arrays.toString(startLocations), jdbcConf.getParallelism()));
-                } else {
-                    for (int i = 0; i < minNumSplits; i++) {
-                        splits[i] =
-                                new JdbcInputSplit(
-                                        i, minNumSplits, i, startLocations[i], null, null, null);
-                    }
+            return createSplitsInternalBySplitMod(minNumSplits, jdbcConf.getStartLocation());
+        }
+    }
+
+    public JdbcInputSplit[] createSplitsInternalBySplitMod(int minNumSplits, String startLocation) {
+        JdbcInputSplit[] splits = new JdbcInputSplit[minNumSplits];
+        if (StringUtils.isNotBlank(startLocation)) {
+            String[] startLocations = startLocation.split(ConstantValue.COMMA_SYMBOL);
+            if (startLocations.length == 1) {
+                for (int i = 0; i < minNumSplits; i++) {
+                    splits[i] =
+                            new JdbcInputSplit(
+                                    i,
+                                    minNumSplits,
+                                    i,
+                                    startLocations[0],
+                                    null,
+                                    null,
+                                    null,
+                                    "mod",
+                                    jdbcConf.isPolling());
                 }
+            } else if (startLocations.length != jdbcConf.getParallelism()) {
+                throw new ChunJunRuntimeException(
+                        String.format(
+                                "startLocations is %s, but parallelism in jdbcConf is [%s]",
+                                Arrays.toString(startLocations), jdbcConf.getParallelism()));
             } else {
                 for (int i = 0; i < minNumSplits; i++) {
-                    splits[i] = new JdbcInputSplit(i, minNumSplits, i, null, null, null, null);
+                    splits[i] =
+                            new JdbcInputSplit(
+                                    i,
+                                    minNumSplits,
+                                    i,
+                                    startLocations[i],
+                                    null,
+                                    null,
+                                    null,
+                                    "mod",
+                                    jdbcConf.isPolling());
                 }
+            }
+        } else {
+            for (int i = 0; i < minNumSplits; i++) {
+                splits[i] =
+                        new JdbcInputSplit(
+                                i,
+                                minNumSplits,
+                                i,
+                                null,
+                                null,
+                                null,
+                                null,
+                                "mod",
+                                jdbcConf.isPolling());
             }
         }
 
@@ -202,7 +233,7 @@ public class JdbcInputFormat extends BaseRichInputFormat {
         if (hasNext) {
             return false;
         } else {
-            if (jdbcConf.isPolling()) {
+            if (currentJdbcInputSplit.isPolling()) {
                 try {
                     TimeUnit.MILLISECONDS.sleep(jdbcConf.getPollingInterval());
                     // 间隔轮询检测数据库连接是否断开，超时时间三秒，断开后自动重连
@@ -250,7 +281,7 @@ public class JdbcInputFormat extends BaseRichInputFormat {
         try {
             @SuppressWarnings("unchecked")
             RowData finalRowData = rowConverter.toInternal(resultSet);
-            if (isUpdateLocation) {
+            if (needUpdateEndLocation) {
                 Object obj;
                 switch (type) {
                     case DATETIME:
@@ -305,8 +336,8 @@ public class JdbcInputFormat extends BaseRichInputFormat {
         }
         // 初始化增量、轮询字段类型
         type = ColumnType.fromString(jdbcConf.getIncreColumnType());
-        startLocationAccumulator = new BigIntegerAccmulator();
-        endLocationAccumulator = new BigIntegerAccmulator();
+        startLocationAccumulator = new BigIntegerAccumulator();
+        endLocationAccumulator = new BigIntegerAccumulator();
         JdbcInputSplit jdbcInputSplit = (JdbcInputSplit) inputSplit;
         String startLocation =
                 StringUtil.stringToTimestampStr(jdbcInputSplit.getStartLocation(), type);
@@ -498,7 +529,7 @@ public class JdbcInputFormat extends BaseRichInputFormat {
      */
     protected boolean canReadData(JdbcInputSplit jdbcInputSplit) {
         // 只排除增量同步
-        if (!jdbcConf.isIncrement() || jdbcConf.isPolling()) {
+        if (!jdbcConf.isIncrement() || currentJdbcInputSplit.isPolling()) {
             return true;
         }
 
@@ -529,7 +560,8 @@ public class JdbcInputFormat extends BaseRichInputFormat {
 
         querySql = buildQuerySqlBySplit(jdbcInputSplit, whereList);
 
-        querySql = querySql + SqlUtil.buildOrderSql(jdbcConf, jdbcDialect, "ASC");
+        if (!jdbcInputSplit.isPolling())
+            querySql = querySql + SqlUtil.buildOrderSql(jdbcConf, jdbcDialect, "ASC");
         LOG.info("Executing sql is: '{}'", querySql);
         return querySql;
     }
@@ -656,7 +688,6 @@ public class JdbcInputFormat extends BaseRichInputFormat {
 
     /** 构建基于startLocation&endLocation的过滤条件 * */
     protected void buildLocationFilter(JdbcInputSplit jdbcInputSplit, List<String> whereList) {
-        String sql = null;
         String startLocation = jdbcInputSplit.getStartLocation();
         if (formatState.getState() != null && StringUtils.isNotBlank(jdbcConf.getRestoreColumn())) {
             startLocation = String.valueOf(formatState.getState());
@@ -666,43 +697,40 @@ public class JdbcInputFormat extends BaseRichInputFormat {
                         jdbcInputSplit.getStartLocation(),
                         startLocation);
                 jdbcInputSplit.setStartLocation(startLocation);
-                sql =
+                whereList.add(
                         SqlUtil.buildFilterSql(
                                 jdbcConf.getCustomSql(),
                                 ">",
                                 startLocation,
                                 jdbcDialect.quoteIdentifier(jdbcConf.getRestoreColumn()),
                                 jdbcConf.getRestoreColumnType(),
-                                jdbcConf.isPolling(),
-                                this::getTimeStr);
+                                jdbcInputSplit.isPolling(),
+                                this::getTimeStr));
             }
         } else if (jdbcConf.isIncrement()) {
             if (StringUtils.isNotBlank(startLocation)) {
                 String operator = jdbcConf.isUseMaxFunc() ? " >= " : " > ";
-                sql =
+                whereList.add(
                         SqlUtil.buildFilterSql(
                                 jdbcConf.getCustomSql(),
                                 operator,
                                 startLocation,
                                 jdbcDialect.quoteIdentifier(jdbcConf.getIncreColumn()),
                                 jdbcConf.getIncreColumnType(),
-                                jdbcConf.isPolling(),
-                                this::getTimeStr);
-            }
-            if (StringUtils.isNotBlank(jdbcInputSplit.getEndLocation())) {
-                sql =
-                        SqlUtil.buildFilterSql(
-                                jdbcConf.getCustomSql(),
-                                "<",
-                                jdbcInputSplit.getEndLocation(),
-                                jdbcDialect.quoteIdentifier(jdbcConf.getIncreColumn()),
-                                jdbcConf.getIncreColumnType(),
-                                false,
-                                this::getTimeStr);
+                                jdbcInputSplit.isPolling(),
+                                this::getTimeStr));
             }
         }
-        if (sql != null) {
-            whereList.add(sql);
+        if (StringUtils.isNotBlank(jdbcInputSplit.getEndLocation())) {
+            whereList.add(
+                    SqlUtil.buildFilterSql(
+                            jdbcConf.getCustomSql(),
+                            "<",
+                            jdbcInputSplit.getEndLocation(),
+                            jdbcDialect.quoteIdentifier(jdbcConf.getIncreColumn()),
+                            jdbcConf.getIncreColumnType(),
+                            false,
+                            this::getTimeStr));
         }
     }
 
@@ -714,17 +742,38 @@ public class JdbcInputFormat extends BaseRichInputFormat {
 
     /** create split when splitStrategy is range * */
     protected JdbcInputSplit[] createSplitsInternalBySplitRange(int minNumSplits) {
-        JdbcInputSplit[] splits;
+        List<JdbcInputSplit> splits = new ArrayList<>();
         Pair<String, String> splitRangeFromDb = getSplitRangeFromDb();
-        if (StringUtils.isBlank(splitRangeFromDb.getLeft())
-                || "null".equalsIgnoreCase(splitRangeFromDb.getLeft())) {
-            // 没有数据，返回空数组
-            return new JdbcInputSplit[minNumSplits];
+        BigDecimal left, right = null;
+        if (StringUtils.isNotBlank(splitRangeFromDb.getLeft())
+                && !"null".equalsIgnoreCase(splitRangeFromDb.getLeft())) {
+            left = new BigDecimal(splitRangeFromDb.getLeft());
+            right = new BigDecimal(splitRangeFromDb.getRight());
+            splits.addAll(createRangeSplits(left, right, minNumSplits));
+            if (jdbcConf.isPolling()) {
+                // polling先range，后mod。mod是>startLocation去消费，所以需要在这里将最后一个range分片改成<=endLocationOfSplit
+                splits.get(splits.size() - 1).setRangeEndLocationOperator(" <= ");
+            }
         }
-        BigDecimal left = new BigDecimal(splitRangeFromDb.getLeft());
-        BigDecimal right = new BigDecimal(splitRangeFromDb.getRight());
-        LOG.info("create splitsInternal,the splitKey range is {} --> {}", left, right);
+        if (jdbcConf.isPolling()) {
+            splits.addAll(
+                    Arrays.asList(
+                            createSplitsInternalBySplitMod(
+                                    jdbcConf.getParallelism(),
+                                    right == null
+                                            ? jdbcConf.getStartLocation()
+                                            : String.valueOf(right))));
+        }
+        Collections.reverse(splits);
+        return splits.toArray(new JdbcInputSplit[0]);
+    }
+
+    protected List<JdbcInputSplit> createRangeSplits(
+            BigDecimal left, BigDecimal right, int minNumSplits) {
         BigDecimal endAndStartGap = right.subtract(left);
+        if (endAndStartGap.compareTo(BigDecimal.ZERO) < 0) return new ArrayList<>();
+        JdbcInputSplit[] splits;
+        LOG.info("create splitsInternal,the splitKey range is {} --> {}", left, right);
         BigDecimal remainder = endAndStartGap.remainder(new BigDecimal(minNumSplits));
         endAndStartGap = endAndStartGap.subtract(remainder);
         BigDecimal step = endAndStartGap.divide(new BigDecimal(minNumSplits));
@@ -748,9 +797,14 @@ public class JdbcInputFormat extends BaseRichInputFormat {
                 end = end.add(BigDecimal.ONE);
                 remainder = remainder.subtract(BigDecimal.ONE);
             }
-            // 分片范围是 splitPk >=start and splitPk < end 最后一个分片范围是splitPk >= start
+            // 分片范围是 splitPk >=start and splitPk < end 最后一个分片范围是splitPk >=
+            // start。但如果是polling模式使用range，最后的endLocation需要固定防止重复消费
             if (i == minNumSplits - 1) {
-                end = null;
+                if (jdbcConf.isPolling()) {
+                    end = right;
+                } else {
+                    end = null;
+                }
             }
             splits[i] =
                     new JdbcInputSplit(
@@ -760,10 +814,12 @@ public class JdbcInputFormat extends BaseRichInputFormat {
                             jdbcConf.getStartLocation(),
                             null,
                             start.toString(),
-                            Objects.isNull(end) ? null : end.toString());
+                            Objects.isNull(end) ? null : end.toString(),
+                            "range",
+                            false);
         }
 
-        return splits;
+        return Arrays.asList(splits);
     }
 
     /**
@@ -773,16 +829,28 @@ public class JdbcInputFormat extends BaseRichInputFormat {
      * @throws SQLException
      */
     protected void executeQuery(String startLocation) throws SQLException {
-        if (jdbcConf.isPolling()) {
+        if (currentJdbcInputSplit.isPolling()) {
             if (StringUtils.isBlank(startLocation)) {
-                // 从数据库中获取起始位置
-                queryStartLocation();
+                queryPollingWithOutStartLocation();
+                // Concatenated sql statement for next polling query
+                StringBuilder builder = new StringBuilder(128);
+                builder.append(jdbcConf.getQuerySql());
+                if (jdbcConf.getQuerySql().contains("WHERE")) {
+                    builder.append(" AND ");
+                } else {
+                    builder.append(" WHERE ");
+                }
+                builder.append(jdbcDialect.quoteIdentifier(jdbcConf.getIncreColumn()))
+                        .append(" > ? ")
+                        .append(SqlUtil.buildOrderSql(jdbcConf, jdbcDialect, "ASC"));
+                jdbcConf.setQuerySql(builder.toString());
+                initPrepareStatement(jdbcConf.getQuerySql());
+                LOG.info("update pollingQuerySql, sql = {}", jdbcConf.getQuerySql());
             } else {
-                ps =
-                        dbConn.prepareStatement(
-                                jdbcConf.getQuerySql(), resultSetType, resultSetConcurrency);
-                ps.setFetchSize(jdbcConf.getFetchSize());
-                ps.setQueryTimeout(jdbcConf.getQueryTimeOut());
+                // set up the order by statements.Prevent repeated consumption when increColumn is
+                // not incrementing in the database
+                jdbcConf.setJdbcUrl(SqlUtil.buildOrderSql(jdbcConf, jdbcDialect, "ASC"));
+                initPrepareStatement(jdbcConf.getQuerySql());
                 queryForPolling(startLocation);
                 state = startLocation;
             }
@@ -793,6 +861,13 @@ public class JdbcInputFormat extends BaseRichInputFormat {
             resultSet = statement.executeQuery(jdbcConf.getQuerySql());
             hasNext = resultSet.next();
         }
+    }
+
+    /** init prepareStatement */
+    public void initPrepareStatement(String querySql) throws SQLException {
+        ps = dbConn.prepareStatement(querySql, resultSetType, resultSetConcurrency);
+        ps.setFetchSize(jdbcConf.getFetchSize());
+        ps.setQueryTimeout(jdbcConf.getQueryTimeOut());
     }
 
     /**
@@ -809,19 +884,10 @@ public class JdbcInputFormat extends BaseRichInputFormat {
      *
      * @throws SQLException
      */
-    protected void queryStartLocation() throws SQLException {
-        // add order by to query SQL avoid duplicate data
-        StringBuilder updateSqlBuilder = new StringBuilder(128);
-        updateSqlBuilder.append(jdbcConf.getQuerySql());
-        updateSqlBuilder
-                .append(" ORDER BY ")
-                .append(jdbcDialect.quoteIdentifier(jdbcConf.getIncreColumn()))
-                .append(" ASC");
-        ps =
-                dbConn.prepareStatement(
-                        updateSqlBuilder.toString(), resultSetType, resultSetConcurrency);
-        ps.setFetchSize(jdbcConf.getFetchSize());
-        ps.setQueryTimeout(jdbcConf.getQueryTimeOut());
+    protected void queryPollingWithOutStartLocation() throws SQLException {
+        String withOutLocationSql = SqlUtil.buildOrderSql(jdbcConf, jdbcDialect, "ASC");
+        LOG.info("query for polling without StartLocation query sql = {}", withOutLocationSql);
+        initPrepareStatement(withOutLocationSql);
         resultSet = ps.executeQuery();
         hasNext = resultSet.next();
 
@@ -838,9 +904,8 @@ public class JdbcInputFormat extends BaseRichInputFormat {
                 if ((System.currentTimeMillis() - startTime) % 300000
                         <= jdbcConf.getPollingInterval()) {
                     LOG.info(
-                            "no record matched condition in database, execute query sql = {}, startLocation = {}",
-                            jdbcConf.getQuerySql(),
-                            endLocationAccumulator.getLocalValue());
+                            "no record matched condition in database, execute query sql = {}",
+                            jdbcConf.getQuerySql());
                 }
             }
         } catch (InterruptedException e) {
@@ -848,24 +913,6 @@ public class JdbcInputFormat extends BaseRichInputFormat {
                     "interrupted while waiting for polling, e = {}",
                     ExceptionUtil.getErrorMessage(e));
         }
-
-        // 查询到数据，更新querySql
-        StringBuilder builder = new StringBuilder(128);
-        builder.append(jdbcConf.getQuerySql());
-        if (jdbcConf.getQuerySql().contains("WHERE")) {
-            builder.append(" AND ");
-        } else {
-            builder.append(" WHERE ");
-        }
-        builder.append(jdbcDialect.quoteIdentifier(jdbcConf.getIncreColumn()))
-                .append(" > ? ORDER BY ")
-                .append(jdbcDialect.quoteIdentifier(jdbcConf.getIncreColumn()))
-                .append(" ASC");
-        jdbcConf.setQuerySql(builder.toString());
-        ps = dbConn.prepareStatement(jdbcConf.getQuerySql(), resultSetType, resultSetConcurrency);
-        ps.setFetchSize(jdbcConf.getFetchSize());
-        ps.setQueryTimeout(jdbcConf.getQueryTimeOut());
-        LOG.info("update querySql, sql = {}", jdbcConf.getQuerySql());
     }
 
     /**

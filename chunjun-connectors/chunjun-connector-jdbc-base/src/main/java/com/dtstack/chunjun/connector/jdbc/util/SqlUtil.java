@@ -110,7 +110,10 @@ public class SqlUtil {
             }
             splitFilter =
                     buildSplitFilterSql(
-                            jdbcConf.getSplitStrategy(), jdbcDialect, jdbcInputSplit, splitColumn);
+                            jdbcInputSplit.getSplitStrategy(),
+                            jdbcDialect,
+                            jdbcInputSplit,
+                            splitColumn);
         }
 
         String querySql;
@@ -216,7 +219,7 @@ public class SqlUtil {
             JdbcConf jdbcConf, JdbcDialect jdbcDialect, String sortRule) {
         String column;
         // 增量任务
-        if (jdbcConf.isIncrement() && !jdbcConf.isPolling()) {
+        if (jdbcConf.isIncrement()) {
             column = jdbcConf.getIncreColumn();
         } else {
             column = jdbcConf.getOrderByColumn();

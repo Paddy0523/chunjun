@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 public class PostgresqlInputFormat extends JdbcInputFormat {
 
     @Override
-    protected void queryStartLocation() throws SQLException {
+    protected void queryPollingWithOutStartLocation() throws SQLException {
         // In PostgreSQL, if resultCursorType is FORWARD_ONLY
         // , the query will report an error after the method
         // #setFetchDirection(ResultSet.FETCH_REVERSE) is called.
