@@ -27,6 +27,12 @@ import com.dtstack.chunjun.element.AbstractBaseColumn;
 import com.dtstack.chunjun.element.ColumnRowData;
 import com.dtstack.chunjun.element.column.BigDecimalColumn;
 import com.dtstack.chunjun.element.column.BooleanColumn;
+import com.dtstack.chunjun.element.column.ByteColumn;
+import com.dtstack.chunjun.element.column.DoubleColumn;
+import com.dtstack.chunjun.element.column.FloatColumn;
+import com.dtstack.chunjun.element.column.IntColumn;
+import com.dtstack.chunjun.element.column.LongColumn;
+import com.dtstack.chunjun.element.column.ShortColumn;
 import com.dtstack.chunjun.element.column.SqlDateColumn;
 import com.dtstack.chunjun.element.column.StringColumn;
 import com.dtstack.chunjun.element.column.TimestampColumn;
@@ -134,11 +140,17 @@ public class InceptorTextColumnConvent
             case "BOOLEAN":
                 return val -> new BooleanColumn(Boolean.parseBoolean(val.toString()));
             case "TINYINT":
+                return val -> new ByteColumn(Byte.parseByte(val.toString()));
             case "SMALLINT":
+                return val -> new ShortColumn(Short.parseShort(val.toString()));
             case "INT":
+                return val -> new IntColumn(Integer.parseInt(val.toString()));
             case "BIGINT":
+                return val -> new LongColumn(Long.parseLong(val.toString()));
             case "FLOAT":
+                return val -> new FloatColumn(Float.parseFloat(val.toString()));
             case "DOUBLE":
+                return val -> new DoubleColumn(Double.parseDouble(val.toString()));
             case "DECIMAL":
                 return val -> new BigDecimalColumn(val.toString());
             case "STRING":

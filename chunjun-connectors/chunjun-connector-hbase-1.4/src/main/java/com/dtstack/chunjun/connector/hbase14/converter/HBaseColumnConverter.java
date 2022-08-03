@@ -31,7 +31,13 @@ import com.dtstack.chunjun.element.AbstractBaseColumn;
 import com.dtstack.chunjun.element.ColumnRowData;
 import com.dtstack.chunjun.element.column.BigDecimalColumn;
 import com.dtstack.chunjun.element.column.BooleanColumn;
+import com.dtstack.chunjun.element.column.ByteColumn;
 import com.dtstack.chunjun.element.column.BytesColumn;
+import com.dtstack.chunjun.element.column.DoubleColumn;
+import com.dtstack.chunjun.element.column.FloatColumn;
+import com.dtstack.chunjun.element.column.IntColumn;
+import com.dtstack.chunjun.element.column.LongColumn;
+import com.dtstack.chunjun.element.column.ShortColumn;
 import com.dtstack.chunjun.element.column.SqlDateColumn;
 import com.dtstack.chunjun.element.column.StringColumn;
 import com.dtstack.chunjun.element.column.TimeColumn;
@@ -226,30 +232,54 @@ public class HBaseColumnConverter
                         new TimestampColumn(
                                 new BigDecimal(new String((byte[]) val, encoding)).longValue());
             case DECIMAL:
+                return val -> {
+                    try {
+                        return new BigDecimalColumn(
+                                BigDecimal.valueOf(Bytes.toDouble((byte[]) val)));
+                    } catch (Exception e) {
+                        return new BigDecimalColumn(new String((byte[]) val, encoding));
+                    }
+                };
             case INTEGER:
             case INTERVAL_YEAR_MONTH:
             case INTERVAL_DAY_TIME:
+                return val -> {
+                    try {
+                        return new IntColumn(Bytes.toInt((byte[]) val));
+                    } catch (Exception e) {
+                        return new IntColumn(Integer.parseInt(new String((byte[]) val, encoding)));
+                    }
+                };
             case FLOAT:
+                return val -> {
+                    try {
+                        return new FloatColumn(Bytes.toFloat((byte[]) val));
+                    } catch (Exception e) {
+                        return new FloatColumn(
+                                Float.parseFloat(new String((byte[]) val, encoding)));
+                    }
+                };
             case DOUBLE:
                 return val -> {
                     try {
-                        return new BigDecimalColumn(Bytes.toDouble((byte[]) val));
+                        return new DoubleColumn(Bytes.toDouble((byte[]) val));
                     } catch (Exception e) {
-                        return new BigDecimalColumn(new String((byte[]) val, encoding));
+                        return new DoubleColumn(
+                                Double.parseDouble(new String((byte[]) val, encoding)));
                     }
                 };
             case BIGINT:
                 return val -> {
                     try {
-                        return new BigDecimalColumn(Bytes.toLong((byte[]) val));
+                        return new LongColumn(Bytes.toLong((byte[]) val));
                     } catch (Exception e) {
-                        return new BigDecimalColumn(new String((byte[]) val, encoding));
+                        return new LongColumn(Long.parseLong(new String((byte[]) val, encoding)));
                     }
                 };
             case TINYINT:
-                return val -> new BigDecimalColumn(((byte[]) val)[0]);
+                return val -> new ByteColumn(((byte[]) val)[0]);
             case SMALLINT:
-                return val -> new BigDecimalColumn(Bytes.toShort(((byte[]) val)));
+                return val -> new ShortColumn(Bytes.toShort(((byte[]) val)));
             case TIME_WITHOUT_TIME_ZONE:
                 return val -> new TimeColumn(Bytes.toInt(((byte[]) val)));
             case BINARY:

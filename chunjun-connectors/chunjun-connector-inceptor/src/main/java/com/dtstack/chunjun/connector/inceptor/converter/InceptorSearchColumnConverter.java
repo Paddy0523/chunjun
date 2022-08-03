@@ -26,6 +26,11 @@ import com.dtstack.chunjun.converter.ISerializationConverter;
 import com.dtstack.chunjun.element.ColumnRowData;
 import com.dtstack.chunjun.element.column.BigDecimalColumn;
 import com.dtstack.chunjun.element.column.BooleanColumn;
+import com.dtstack.chunjun.element.column.ByteColumn;
+import com.dtstack.chunjun.element.column.DoubleColumn;
+import com.dtstack.chunjun.element.column.IntColumn;
+import com.dtstack.chunjun.element.column.LongColumn;
+import com.dtstack.chunjun.element.column.ShortColumn;
 import com.dtstack.chunjun.element.column.SqlDateColumn;
 import com.dtstack.chunjun.element.column.StringColumn;
 import com.dtstack.chunjun.element.column.TimestampColumn;
@@ -67,17 +72,18 @@ public class InceptorSearchColumnConverter extends JdbcColumnConverter {
         switch (type.getTypeRoot()) {
             case VARCHAR:
                 return val -> new StringColumn((String) val);
-            case INTEGER:
             case SMALLINT:
-                return val -> new BigDecimalColumn(new BigDecimal(val.toString()).intValue());
+                return val -> new ShortColumn(Short.parseShort(val.toString()));
+            case INTEGER:
+                return val -> new IntColumn(Integer.parseInt(val.toString()));
             case BOOLEAN:
                 return val -> new BooleanColumn(Boolean.parseBoolean(val.toString()));
             case TINYINT:
-                return val -> new BigDecimalColumn(new BigDecimal(val.toString()).byteValue());
+                return val -> new ByteColumn(Byte.parseByte(val.toString()));
             case BIGINT:
-                return val -> new BigDecimalColumn((Long) val);
+                return val -> new LongColumn(Long.parseLong(val.toString()));
             case DOUBLE:
-                return val -> new BigDecimalColumn((Double) val);
+                return val -> new DoubleColumn(Double.parseDouble(val.toString()));
             case DATE:
                 return val -> {
                     HiveDate hiveDate = (HiveDate) val;
