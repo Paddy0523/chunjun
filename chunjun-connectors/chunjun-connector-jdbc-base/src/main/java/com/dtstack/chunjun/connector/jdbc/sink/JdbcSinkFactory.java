@@ -32,7 +32,6 @@ import com.dtstack.chunjun.table.options.SinkOptions;
 import com.dtstack.chunjun.util.GsonUtil;
 import com.dtstack.chunjun.util.TableUtil;
 
-import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.table.data.RowData;
@@ -127,10 +126,7 @@ public abstract class JdbcSinkFactory extends SinkFactory {
     }
 
     protected Pair<List<String>, List<String>> getTableMetaData(Connection dbConn) {
-        Tuple3<String, String, String> tableIdentify =
-                jdbcDialect.getTableIdentify().apply(jdbcConf);
-        return JdbcUtil.getTableMetaData(
-                tableIdentify.f0, tableIdentify.f1, tableIdentify.f2, dbConn);
+        return jdbcDialect.getTableMetaData(dbConn, jdbcConf);
     }
 
     protected Connection getConn() {

@@ -22,7 +22,6 @@ import com.dtstack.chunjun.connector.jdbc.conf.JdbcConf;
 import com.dtstack.chunjun.connector.jdbc.dialect.JdbcDialect;
 import com.dtstack.chunjun.connector.jdbc.statement.FieldNamedPreparedStatement;
 import com.dtstack.chunjun.connector.jdbc.statement.FieldNamedPreparedStatementImpl;
-import com.dtstack.chunjun.connector.jdbc.util.JdbcUtil;
 import com.dtstack.chunjun.converter.AbstractRowConverter;
 import com.dtstack.chunjun.util.TableUtil;
 
@@ -173,7 +172,8 @@ public class DynamicPreparedStmt {
 
     public void getColumnMeta(String schema, String table, Connection dbConn) {
         Pair<List<String>, List<String>> listListPair =
-                JdbcUtil.getTableMetaData(null, schema, table, dbConn);
+                jdbcDialect.getTableMetaData(
+                        dbConn, schema, table, jdbcConf.getQueryTimeOut(), null, null);
         List<String> nameList = listListPair.getLeft();
         List<String> typeList = listListPair.getRight();
         for (String columnName : columnNameList) {
